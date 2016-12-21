@@ -13,7 +13,6 @@ import java.util.Vector;
 @Path("/brokers")
 public class BrokerAPI {
   @GET
-  @Path("/")
   @Produces(MediaType.APPLICATION_JSON)
   public Collection<Integer> getBrokerIds() {
     Collection<Integer> brokers = new Vector<>();

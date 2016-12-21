@@ -10,7 +10,6 @@ import java.util.HashMap;
 @Path("/")
 public class Index {
   @GET
-  @Path("/")
   @Produces(MediaType.APPLICATION_JSON)
   public Version info() {
     return new Version();

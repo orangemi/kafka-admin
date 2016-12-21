@@ -10,7 +10,6 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.zookeeper.data.Stat;
@@ -19,7 +18,6 @@ import scala.collection.JavaConversions;
 import scala.collection.Seq;
 
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.Vector;
 
 public class Model {
@@ -135,26 +133,41 @@ public class Model {
     return offset;
   }
   
+  public com.teambition.kafka.model.Consumer getZkConsumerGroup(String group) {
+    com.teambition.kafka.model.Consumer consumerModel = new com.teambition.kafka.model.Consumer(group);
+    Collection<String> topics = getZookeeperChildren("/consumers/" + group + "/offsets");
+    topics.forEach(topic -> {
+      Collection<String> partitions = getZookeeperChildren("/consumers/" + group + "/offsets/" + topic);
+      partitions.forEach(partitionString -> {
+        int partition = Integer.valueOf(partitionString);
+        String offsetString = getZookeeperData("/consumers/" + group + "/offsets/" + topic + "/" + partitionString);
+        long offset = Long.valueOf(offsetString);
+        System.out.println("topic, partition, offset: " + topic + "," + partition + "," + offset);
+        consumerModel.addTopicPartition(topic, partition, offset);
+      });
+    });
+    return consumerModel;
+  }
+  
   public Collection<String> getConsumerV2s() {
     Collection<String> consumers = new Vector<>();
     JavaConversions.asJavaCollection(adminClient.listAllConsumerGroupsFlattened()).forEach(consumerGroup -> consumers.add(consumerGroup.groupId()));
     return consumers;
   }
   
-  public Collection<String> getTopicsByConsumerV2(String group) {
-    Collection<String> topics = new Vector<>();
+  public com.teambition.kafka.model.Consumer getConsumerV2(String group) {
+    com.teambition.kafka.model.Consumer consumerModel = new com.teambition.kafka.model.Consumer(group);
     Consumer<String, String> consumer = createConsumer(group);
     JavaConversions.asJavaCollection(adminClient.describeConsumerGroup(group))
       .forEach(consumerSummary -> {
         JavaConversions.asJavaCollection(consumerSummary.assignment()).forEach(topicPartition -> {
-          if (topics.contains(topicPartition.topic())) return;
           long offset = consumer.committed(new TopicPartition(topicPartition.topic(), topicPartition.partition())).offset();
-          topics.add(topicPartition.topic());
+          consumerModel.addTopicPartition(topicPartition.topic(), topicPartition.partition(), offset);
         });
         
       });
     consumer.close();
-    return topics;
+    return consumerModel;
   }
   
   public Collection<String> getZookeeperChildren(String path) {
