@@ -7,9 +7,10 @@ import com.teambition.kafka.model.Version;
 
 import java.util.HashMap;
 
-@Path("")
+@Path("/")
 public class Index {
   @GET
+  @Path("/")
   @Produces(MediaType.APPLICATION_JSON)
   public Version info() {
     return new Version();

@@ -1,12 +1,17 @@
 [WIP] Kafka Admin Rest API
 
 ## API
- - [ ] /brokers
- - [ ] /topics
- - [ ] /topics/:name
- - [ ] /topics/:name/configs
- - [ ] /topics/:name/partitions
- - [ ] /consumers
- - [ ] /consumers/:group
- - [ ] /consumers/:group/instances
- - [ ] /consumers/:group/instances/:instance
+- [X] GET /brokers
+
+- [X] GET /topics
+- [X] GET /topics/:name
+- [X] GET /topics/:name/configs
+- [X] GET /topics/:name/partitions
+
+- [X] GET /consumers
+- [ ] GET /consumers/:group
+
+- [X] GET /consumers-v2
+- [ ] GET /consumers-v2/:group
+
+- [X] GET /zookeeper/*

@@ -10,9 +10,10 @@ import kafka.cluster.Broker;
 import java.util.Collection;
 import java.util.Vector;
 
-@Path("brokers")
+@Path("/brokers")
 public class BrokerAPI {
   @GET
+  @Path("/")
   @Produces(MediaType.APPLICATION_JSON)
   public Collection<Integer> getBrokerIds() {
     Collection<Integer> brokers = new Vector<>();
