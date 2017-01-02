@@ -1,6 +1,13 @@
 apply plugin: 'java'
+
 repositories {
   jcenter()
+}
+
+task run (type: JavaExec, dependsOn: classes){
+  args('config/config.properties')
+  main = "com.teambition.kafka.admin.Main"
+  classpath = sourceSets.main.runtimeClasspath
 }
 
 dependencies {
@@ -13,6 +20,8 @@ dependencies {
   compile group: 'org.glassfish.jersey.containers', name: 'jersey-container-servlet', version: '2.25'
   compile group: 'org.glassfish.jersey.containers', name: 'jersey-container-servlet-core', version: '2.25'
   compile group: 'org.glassfish.jersey.media', name: 'jersey-media-json-jackson', version: '2.25'
+
+  compile group: 'org.influxdb', name: 'influxdb-java', version: '2.5'
 
   compile group: 'org.apache.kafka', name: 'kafka_2.11', version: '0.10.0.1'
 

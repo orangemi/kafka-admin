@@ -1,13 +1,10 @@
-package com.teambition.kafka.admin.rest;
+package com.teambition.kafka.admin.api;
 
-import com.teambition.kafka.model.Model;
-import com.teambition.kafka.model.ZKNode;
-import kafka.utils.Json;
+import com.teambition.kafka.admin.model.Model;
+import com.teambition.kafka.admin.model.ZKNode;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.Collection;
-import java.util.Vector;
 
 @Path("/zookeeper")
 public class ZookeeperAPI {

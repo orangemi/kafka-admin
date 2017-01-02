@@ -1,10 +1,10 @@
-package com.teambition.kafka.model;
+package com.teambition.kafka.admin.model;
 
 import kafka.admin.AdminClient;
 import kafka.admin.AdminUtils;
 import kafka.api.LeaderAndIsr;
-import kafka.cluster.Broker;
 import kafka.server.ConfigType;
+import kafka.utils.Json;
 import kafka.utils.ZkUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -22,23 +22,61 @@ import java.util.Vector;
 
 public class Model {
   private static final String ADMIN_CONSUMER_GROUP_NAME = "kafka-admin-consumer";
-  private static final String ZKHost = "localhost:2181";
-  private static final String KafkaHost = "localhost:9092";
-// private static final ZKHost = "kafka01-cn.teambition.corp:2181";
-// private static final KafkaHost = "kafka01-cn.teambition.corp:9092";
+  private String zkHost = "localhost:2181";
+  private String kafkaHost = "localhost:9092";
+//  private static final String zkHost = "kafka01-cn.teambition.corp:2181";
+//  private static final String kafkaHost = "kafka01-cn.teambition.corp:9092";
+//  private static final String zkHost = "project.ci:32181";
+//  private static final String kafkaHost = "project.ci:39092";
   
   private static Model instance;
   private ZkUtils zkUtils;
   private AdminClient adminClient;
+  private Consumer<String, String> adminConsumer;
 //  private Consumer<String, String> consumer;
   
   public static Model getInstance() {
-    if (instance == null) instance = new Model();
+    if (instance == null) throw new RuntimeException("instance not inited ...");
     return instance;
   }
   
-  public Collection<Broker> getBrokerCollections() {
-    return JavaConversions.asJavaCollection(zkUtils.getAllBrokersInCluster());
+  public static Model getInstance(Properties properties) {
+    if (instance != null) throw new RuntimeException("Can not re-init model with properties");
+    instance = new Model();
+    instance.zkHost = properties.getProperty("zookeeper");
+    instance.kafkaHost = properties.getProperty("kafka");
+    return instance;
+  }
+  
+  private Consumer<String, String> getAdminConsumer() {
+    if (adminConsumer == null) {
+      adminConsumer = createConsumer(ADMIN_CONSUMER_GROUP_NAME);
+    }
+    return adminConsumer;
+  }
+  
+  public Map<String, Object> getBrokerInfo(int id) {
+    String data = getZookeeperData("/brokers/ids/" + id);
+    Map<String, Object> map =
+      JavaConversions.mapAsJavaMap((scala.collection.immutable.HashMap)Json.parseFull(data).get());
+    return map;
+  }
+  
+  public KafkaBrokerJmxClient getKafkaBrokerJmxClient(int id) {
+    Map<String, Object> map = getBrokerInfo(id);
+    String host = (String)map.get("host");
+    int port = (int)map.get("jmx_port");
+    if (port == -1) {
+      throw new RuntimeException("broker jmx not enabled");
+    }
+    String jmxUrl = "service:jmx:rmi:///jndi/rmi://" + host + ":" + port + "/jmxrmi";
+    return new KafkaBrokerJmxClient(jmxUrl);
+  }
+  
+  public Collection<Integer> getBrokerCollections() {
+    Collection<Integer> brokers = new Vector<>();
+    JavaConversions.asJavaCollection(zkUtils.getAllBrokersInCluster()).forEach(broker -> brokers.add(broker.id()));
+    return brokers;
   }
   
   public Collection<String> getTopicCollections() {
@@ -56,8 +94,8 @@ public class Model {
         zkUtils.getPartitionAssignmentForTopics(JavaConversions.asScalaBuffer(Arrays.asList(topic)))
           .get(topic)
           .get());
-    partitionMap.forEach((key, value) -> {
-      int id = (Integer)key;
+    partitionMap.entrySet().forEach((entry) -> {
+      int id = (Integer)entry.getKey();
 
       // get partition end offset
       long beginOffset = getTopicPartitionOffset(topic, id, true);
@@ -73,7 +111,7 @@ public class Model {
       LeaderAndIsr leaderAndIsr = leaderAndIsrOpt.get();
       partition.setLeader(leaderAndIsr.leader());
   
-      JavaConversions.asJavaCollection(value).forEach(brokerObj -> {
+      JavaConversions.asJavaCollection(entry.getValue()).forEach(brokerObj -> {
         int broker = (Integer)brokerObj;
         PartitionReplica replica = new PartitionReplica(
           broker,
@@ -118,23 +156,21 @@ public class Model {
   }
   
   public long getTopicPartitionOffset(String topic, int partition, boolean seekBeginning) {
-    Consumer<String, String> consumer = createConsumer(ADMIN_CONSUMER_GROUP_NAME);
     TopicPartition topicPartition = new TopicPartition(topic, partition);
     Collection<TopicPartition> topicPartitions = new Vector<>();
     topicPartitions.add(topicPartition);
-    consumer.assign(topicPartitions);
+    getAdminConsumer().assign(topicPartitions);
     if (seekBeginning) {
-      consumer.seekToBeginning(topicPartitions);
+      getAdminConsumer().seekToBeginning(topicPartitions);
     } else {
-      consumer.seekToEnd(topicPartitions);
+      getAdminConsumer().seekToEnd(topicPartitions);
     }
-    long offset = consumer.position(topicPartition);
-    consumer.close();
+    long offset = getAdminConsumer().position(topicPartition);
     return offset;
   }
   
-  public com.teambition.kafka.model.Consumer getZkConsumerGroup(String group) {
-    com.teambition.kafka.model.Consumer consumerModel = new com.teambition.kafka.model.Consumer(group);
+  public com.teambition.kafka.admin.model.Consumer getZkConsumerGroup(String group) {
+    com.teambition.kafka.admin.model.Consumer consumerModel = new com.teambition.kafka.admin.model.Consumer(group);
     Collection<String> topics = getZookeeperChildren("/consumers/" + group + "/offsets");
     topics.forEach(topic -> {
       Collection<String> partitions = getZookeeperChildren("/consumers/" + group + "/offsets/" + topic);
@@ -142,8 +178,7 @@ public class Model {
         int partition = Integer.valueOf(partitionString);
         String offsetString = getZookeeperData("/consumers/" + group + "/offsets/" + topic + "/" + partitionString);
         long offset = Long.valueOf(offsetString);
-        System.out.println("topic, partition, offset: " + topic + "," + partition + "," + offset);
-        consumerModel.addTopicPartition(topic, partition, offset);
+        consumerModel.addTopicPartition(new TopicPartition(topic, partition), offset);
       });
     });
     return consumerModel;
@@ -151,18 +186,21 @@ public class Model {
   
   public Collection<String> getConsumerV2s() {
     Collection<String> consumers = new Vector<>();
-    JavaConversions.asJavaCollection(adminClient.listAllConsumerGroupsFlattened()).forEach(consumerGroup -> consumers.add(consumerGroup.groupId()));
+    JavaConversions.asJavaCollection(adminClient.listAllConsumerGroupsFlattened()).forEach(consumerGroup -> {
+      consumers.add(consumerGroup.groupId());
+    });
     return consumers;
   }
   
-  public com.teambition.kafka.model.Consumer getConsumerV2(String group) {
-    com.teambition.kafka.model.Consumer consumerModel = new com.teambition.kafka.model.Consumer(group);
+  public com.teambition.kafka.admin.model.Consumer getConsumerV2(String group) {
+    com.teambition.kafka.admin.model.Consumer consumerModel = new com.teambition.kafka.admin.model.Consumer(group);
     Consumer<String, String> consumer = createConsumer(group);
     JavaConversions.asJavaCollection(adminClient.describeConsumerGroup(group))
       .forEach(consumerSummary -> {
         JavaConversions.asJavaCollection(consumerSummary.assignment()).forEach(topicPartition -> {
           long offset = consumer.committed(new TopicPartition(topicPartition.topic(), topicPartition.partition())).offset();
-          consumerModel.addTopicPartition(topicPartition.topic(), topicPartition.partition(), offset);
+          
+          consumerModel.addTopicPartition(topicPartition, offset);
         });
         
       });
@@ -183,11 +221,11 @@ public class Model {
   
   private Model() {
     // TODO: should load config properties
-    zkUtils = ZkUtils.apply(ZKHost, 3000, 3000, false);
+    zkUtils = ZkUtils.apply(zkHost, 3000, 3000, false);
 
     // Create adminClient
     Properties adminProps = new Properties();
-    adminProps.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, KafkaHost);
+    adminProps.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaHost);
     adminClient = AdminClient.create(adminProps);
   }
   
@@ -196,13 +234,14 @@ public class Model {
   
     // Create Consumer
     Properties consumerProps = new Properties();
-    consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaHost);
+    consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaHost);
     consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, group);
     consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     consumerProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
     consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, deserializer);
     consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
   
-    return new KafkaConsumer<>(consumerProps);
+    Consumer<String, String> consumer = new KafkaConsumer<>(consumerProps);
+    return consumer;
   }
 }

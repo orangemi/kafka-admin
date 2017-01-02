@@ -1,8 +1,8 @@
-package com.teambition.kafka.admin.rest;
+package com.teambition.kafka.admin.api;
 
-import com.teambition.kafka.model.Model;
-import com.teambition.kafka.model.Partition;
-import com.teambition.kafka.model.Topic;
+import com.teambition.kafka.admin.model.Model;
+import com.teambition.kafka.admin.model.Partition;
+import com.teambition.kafka.admin.model.Topic;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;

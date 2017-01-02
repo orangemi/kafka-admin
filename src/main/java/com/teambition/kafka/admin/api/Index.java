@@ -1,9 +1,9 @@
-package com.teambition.kafka.admin.rest;
+package com.teambition.kafka.admin.api;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
-import com.teambition.kafka.model.Version;
+import com.teambition.kafka.admin.model.Version;
 
 import java.util.HashMap;
 

@@ -1,4 +1,4 @@
-package com.teambition.kafka.model;
+package com.teambition.kafka.admin.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

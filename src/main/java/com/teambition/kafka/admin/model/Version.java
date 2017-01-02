@@ -1,4 +1,4 @@
-package com.teambition.kafka.model;
+package com.teambition.kafka.admin.model;
 
 public class Version {
   private String name;

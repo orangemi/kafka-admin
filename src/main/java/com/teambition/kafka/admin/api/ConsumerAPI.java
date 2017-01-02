@@ -1,7 +1,7 @@
-package com.teambition.kafka.admin.rest;
+package com.teambition.kafka.admin.api;
 
-import com.teambition.kafka.model.Consumer;
-import com.teambition.kafka.model.Model;
+import com.teambition.kafka.admin.model.Consumer;
+import com.teambition.kafka.admin.model.Model;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
