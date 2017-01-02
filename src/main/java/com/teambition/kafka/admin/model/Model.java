@@ -29,7 +29,7 @@ public class Model {
 //  private static final String zkHost = "project.ci:32181";
 //  private static final String kafkaHost = "project.ci:39092";
   
-  private static Model instance;
+  private static Model instance = null;
   private ZkUtils zkUtils;
   private AdminClient adminClient;
   private Consumer<String, String> adminConsumer;

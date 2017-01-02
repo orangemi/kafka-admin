@@ -1,5 +1,6 @@
 package com.teambition.kafka.admin;
 
+import com.teambition.kafka.admin.model.Model;
 import com.teambition.kafka.admin.tasks.KafkaMonitor;
 import com.teambition.kafka.admin.tasks.WebServer;
 
@@ -34,7 +35,7 @@ public class Main {
     }
     
     printConfig(prop);
-    
+    Model.getInstance(prop);
     WebServer webServer = new WebServer(prop);
     webServer.start();
     KafkaMonitor monitor = new KafkaMonitor(prop);
