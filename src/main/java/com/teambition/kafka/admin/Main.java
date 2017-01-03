@@ -17,12 +17,14 @@ public class Main {
   
   public static void main(String[] argv) throws Exception {
     Properties prop = new Properties();
+    
     if (argv.length == 0) {
       prop.load(Main
         .class.getClassLoader()
         .getResourceAsStream(CONFIG_FILE));
     } else {
       String configFile = System.getProperty("user.dir") + "/" + argv[0];
+      echo(configFile);
       try {
         prop.load(new FileInputStream(configFile));
       } catch (FileNotFoundException ex) {

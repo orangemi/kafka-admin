@@ -45,6 +45,7 @@ public class Model {
     instance = new Model();
     instance.zkHost = properties.getProperty("zookeeper");
     instance.kafkaHost = properties.getProperty("kafka");
+    instance.init();
     return instance;
   }
   
@@ -208,6 +209,13 @@ public class Model {
     return consumerModel;
   }
   
+  public boolean setConsumerV2(String group, String topic, int partition, long offset) {
+    Consumer<String, String> consumer = createConsumer(group);
+    consumer.seek(new TopicPartition(topic, partition), offset);
+    consumer.commitSync();
+    return false;
+  }
+  
   public Collection<String> getZookeeperChildren(String path) {
     return JavaConversions.asJavaCollection(zkUtils.getChildren(path));
   }
@@ -220,6 +228,9 @@ public class Model {
   }
   
   private Model() {
+  }
+
+  private void init() {
     // TODO: should load config properties
     zkUtils = ZkUtils.apply(zkHost, 3000, 3000, false);
 

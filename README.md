@@ -89,6 +89,8 @@ Please note that `JMX_PORT` should be assigned for kafka instance
 - https://www.datadoghq.com/blog/collecting-kafka-performance-metrics/
 - https://github.com/linkedin/Burrow/wiki/What-is-Burrow
 - https://apps.sematext.com/spm-reports/mainPage.do?selectedApplication=4291
+- http://blog.csdn.net/lizhitao/article/details/24581907
+- http://blog.csdn.net/lizhitao/article/details/39499283
 
 ## Related Projects
 - https://github.com/orangemi/kafka-admin-web

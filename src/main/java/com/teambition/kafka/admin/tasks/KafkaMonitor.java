@@ -14,7 +14,9 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 public class KafkaMonitor extends TimerTask {
-
+  
+  private Properties properties;
+  private boolean enable = true;
   private int round = 0;
   private String dbUrl = "http://localhost:8086";
   private String dbUser = "root";
@@ -31,10 +33,12 @@ public class KafkaMonitor extends TimerTask {
   }
   
   public KafkaMonitor() {
-    
+    properties = new Properties();
   }
   
   public KafkaMonitor(Properties properties) {
+    this.properties = properties;
+    enable = properties.getProperty("monitor.enable", "true").equals("true");
     dbUrl = properties.getProperty("influxdb.url", "http://localhost:8086");
     dbUser = properties.getProperty("influxdb.user", "root");
     dbPassword = properties.getProperty("influxdb.password", "root");
@@ -43,6 +47,7 @@ public class KafkaMonitor extends TimerTask {
   }
   
   public void start() {
+    if (!enable) return;
     timer = new Timer();
     timer.schedule(this, 0, internal_time);
   }

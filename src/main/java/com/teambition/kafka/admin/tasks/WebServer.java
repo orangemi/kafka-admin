@@ -11,7 +11,7 @@ import java.util.Properties;
 
 public class WebServer {
   public final static String CONFIG_PREFIX = "webserver";
-  public final static String PORT_CONFIG = "port";
+  public final static String PORT_CONFIG = "webserver.port";
   private Properties properties;
   private int port = 9001;
   private Server server;
@@ -25,7 +25,7 @@ public class WebServer {
   public WebServer(Properties properties) {
     this();
     this.properties = properties;
-    this.port = Integer.valueOf(properties.getProperty(CONFIG_PREFIX + "." + PORT_CONFIG));
+    this.port = Integer.valueOf(properties.getProperty(PORT_CONFIG));
   }
   
   public void start() {
