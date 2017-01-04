@@ -4,36 +4,91 @@ import kafka.common.ErrorMapping;
 import kafka.common.OffsetAndMetadata;
 import kafka.common.OffsetMetadata;
 import kafka.common.TopicAndPartition;
+import kafka.coordinator.GroupMetadataManager;
+import kafka.coordinator.GroupTopicPartition;
+import kafka.coordinator.OffsetKey;
 import kafka.javaapi.OffsetCommitRequest;
 import kafka.javaapi.OffsetCommitResponse;
 import kafka.network.BlockingChannel;
-import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
-import java.io.IOException;
-import java.util.LinkedHashMap;
+import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Properties;
+import java.util.Arrays;
 
-/**
- * Created by Orange on 03/01/2017.
- */
-public class ConsumerManager {
+public class ConsumerManager implements Runnable {
   
-  public static void main(String[] argv) {
-    ConsumerManager consumerManager = new ConsumerManager();
-    consumerManager.brokerHost = "kafka01-cn.teambition.corp";
-    consumerManager.brokerPort = 9092;
-    consumerManager.commitOffset("connect-pompeii-postgresql-sink-connector", "", "core", 0, 2172559353L);
+  private Map<String, com.teambition.kafka.admin.model.Consumer> consumerMap = new HashMap<>();
+  private String kafkaHost;
+  private static final String OFFSET_CONSUMER_GROUP = "kafka-admin-offset-reader";
+  private Consumer<byte[], byte[]> offsetConsumer;
+  
+  public ConsumerManager(String kafkaHost) {
+    this.kafkaHost = kafkaHost;
   }
   
-  public String brokerHost = "project.ci";
-  public int brokerPort = 39092;
+  public Map<String, com.teambition.kafka.admin.model.Consumer> getConsumerList() {
+    return consumerMap;
+  }
+  
+  @Override
+  public void run() {
+    while (true) {
+      fetchOffsets();
+    }
+  }
+  
+  public void fetchOffsets() {
+    boolean hasRecord = true;
+    int count = 0;
+    
+    while (hasRecord) {
+      count++;
+      hasRecord = false;
+      Iterator<ConsumerRecord<byte[], byte[]>> iterator = getOffsetConsumer().poll(50000).iterator();
+      while (iterator.hasNext() && count < 100) {
+        hasRecord = true;
+        ConsumerRecord<byte[], byte[]> record = iterator.next();
+        Object key = GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
+        if (key instanceof OffsetKey) {
+          GroupTopicPartition groupTopicPartition = ((OffsetKey) key).key();
+          if (!consumerMap.containsKey(groupTopicPartition.group())) {
+            consumerMap.put(groupTopicPartition.group(), new com.teambition.kafka.admin.model.Consumer(groupTopicPartition.group()));
+          }
+          if (record.value() == null) {
+            consumerMap.get(groupTopicPartition.group()).addTopicPartition(groupTopicPartition.topicPartition(), 0L);
+          } else {
+            OffsetAndMetadata value = GroupMetadataManager.readOffsetMessageValue(ByteBuffer.wrap(record.value()));
+            consumerMap.get(groupTopicPartition.group()).addTopicPartition(groupTopicPartition.topicPartition(), value.offset());
+          }
+//          System.out.println("record: partition: " + record.partition()  + " offset:" + record.offset() + " : " + count);
+//          System.out.println("  group: " + ((OffsetKey) key).key().group());
+//          System.out.println("  topic: " + ((OffsetKey) key).key().topicPartition().topic());
+//          System.out.println("  partition: " + ((OffsetKey) key).key().topicPartition().partition());
+//          System.out.println("  offset: " + value.offset());
+//          System.out.println("  metadata: " + value.metadata());
+//          System.out.println("  commitTime: " + value.commitTimestamp());
+//          System.out.println("  expiredTime: " + value.expireTimestamp());
+        } else {
+          // ignore other value
+        }
+      }
+    }
+  }
   
   public void commitOffset(String group, String clientId, String topic, int partition, long offset) {
     int correlationId = 0;
     long now = System.currentTimeMillis();
     long expired = now + 86400L * 1000;
 
-    Map<TopicAndPartition, OffsetAndMetadata> offsets = new LinkedHashMap<>();
+    Map<TopicAndPartition, OffsetAndMetadata> offsets = new HashMap<>();
     offsets.put(new TopicAndPartition(topic, partition), new OffsetAndMetadata(new OffsetMetadata(offset, ""), now, expired));
     OffsetCommitRequest commitRequest = new OffsetCommitRequest(
       group,
@@ -44,7 +99,8 @@ public class ConsumerManager {
     ); // version 1 and above commit to Kafka, version 0 commits to ZooKeeper
     
     try {
-      BlockingChannel channel = new BlockingChannel(brokerHost, brokerPort,
+      // TODO: set blockchannel host & port
+      BlockingChannel channel = new BlockingChannel("", 9092,
         BlockingChannel.UseDefaultBufferSize(),
         BlockingChannel.UseDefaultBufferSize(),
         5000 /* read timeout in millis */);
@@ -70,4 +126,35 @@ public class ConsumerManager {
       ioe.printStackTrace();
     }
   }
+  
+  private Consumer<byte[], byte[]> getOffsetConsumer() {
+    if (offsetConsumer == null) {
+      String deserializer = ByteArrayDeserializer.class.getName();
+      Properties consumerProps = new Properties();
+      consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaHost);
+      consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, OFFSET_CONSUMER_GROUP);
+      consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+      consumerProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
+      consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+      consumerProps.put(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, "false");
+      consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, deserializer);
+      consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
+  
+      offsetConsumer = new KafkaConsumer<>(consumerProps);
+      offsetConsumer.subscribe(Arrays.asList("__consumer_offsets"));
+    }
+    return offsetConsumer;
+  }
+  
+  public static void main(String[] argv) {
+    String kafkaHost = "localhost:9092";
+    ConsumerManager consumerManager = new ConsumerManager(kafkaHost);
+    consumerManager.fetchOffsets();
+
+//    consumerManager.brokerHost = "kafka01-cn.teambition.corp";
+//    consumerManager.brokerPort = 9092;
+//    consumerManager.commitOffset("connect-pompeii-postgresql-sink-connector", "", "core", 0, 2172559353L);
+  }
+  
+  
 }

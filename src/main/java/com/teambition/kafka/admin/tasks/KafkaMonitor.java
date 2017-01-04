@@ -8,9 +8,7 @@ import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.BatchPoints;
 import org.influxdb.dto.Point;
 
-import java.util.Properties;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class KafkaMonitor extends TimerTask {
@@ -21,7 +19,7 @@ public class KafkaMonitor extends TimerTask {
   private String dbUrl = "http://localhost:8086";
   private String dbUser = "root";
   private String dbPassword = "root";
-  private String dbName = "default2";
+  private String dbName = "default";
   private InfluxDB db;
   private BatchPoints batchPoints;
   private int internal_time = 10000; // 10 seconds
@@ -69,12 +67,8 @@ public class KafkaMonitor extends TimerTask {
       .consistency(InfluxDB.ConsistencyLevel.ALL)
       .build();
   
-    System.out.println("gather broker info(round: " + round + ") ...");
-    logBrokers();
-  
-    System.out.println("gather topic info(round: " + round + ") ...");
     logTopicCount();
-
+    
     // Topic Partition
     Model.getInstance().getTopicCollections().forEach(topic -> {
       Model.getInstance().getTopicPartitions(topic).forEach(partition -> {
@@ -93,8 +87,6 @@ public class KafkaMonitor extends TimerTask {
 
       });
     });
-  
-    System.out.println("gather consumer info(round: " + round + ") ...");
   
     // Consumers2
     Model.getInstance().getConsumerV2s().forEach(consumer -> {
@@ -118,49 +110,8 @@ public class KafkaMonitor extends TimerTask {
       });
     });
   
+    logBrokers();
     db.write(batchPoints);
-  }
-  
-  private Point getMeterPoint(JmxReporter.MeterMBean meter, String name, Point.Builder builder) {
-    return builder
-      .addField(name + "-MeanRate", meter.getMeanRate())
-      .addField(name + "-Count", meter.getCount())
-      .addField(name + "-OneMinuteRate", meter.getOneMinuteRate())
-      .addField(name + "-FiveMinuteRate", meter.getFiveMinuteRate())
-      .addField(name + "-FifteenMinuteRate", meter.getFifteenMinuteRate())
-      .build();
-  }
-  
-  private Point getTopicPointByMeasure(KafkaBrokerJmxClient jmx, int brokerId, String name) {
-    Point.Builder pointBuilder = Point.measurement("kafka-broker-" + name);
-    jmx.getObjectNamesByPattern("kafka.*:type=*,name=" + name + ",topic=*").forEach(objectName -> {
-      String topic = objectName.getKeyProperty("topic");
-      JmxReporter.MeterMBean meter = jmx.getMeterByObjectName(objectName);
-      pointBuilder
-        .tag("broker", String.valueOf(brokerId))
-        .tag("topic", topic)
-        .addField("MeanRate", meter.getMeanRate())
-        .addField("Count", meter.getCount())
-        .addField("OneMinuteRate", meter.getOneMinuteRate())
-        .addField("FiveMinuteRate", meter.getFiveMinuteRate())
-        .addField("FifteenMinuteRate", meter.getFifteenMinuteRate());
-    });
-    return pointBuilder.build();
-  }
-  
-  private Point getTopicPartitionPointByMeasure(KafkaBrokerJmxClient jmx, int brokerId, String name) {
-    Point.Builder pointBuilder = Point.measurement("kafka-broker-" + name);
-    jmx.getObjectNamesByPattern("kafka.*:type=*,name=" + name + ",topic=*,partition=*").forEach(objectName -> {
-      String topic = objectName.getKeyProperty("topic");
-      String partition = objectName.getKeyProperty("partition");
-      pointBuilder
-        .tag("broker", String.valueOf(brokerId))
-        .tag("topic", topic)
-        .tag("partition", partition)
-        .addField(name, (Number)jmx.getGaugeByObjectName(objectName).getValue());
-    });
-    return pointBuilder.build();
-    
   }
   
   public void logBrokers() {
@@ -171,25 +122,108 @@ public class KafkaMonitor extends TimerTask {
       .build());
   
     Model.getInstance().getBrokerCollections().forEach(id -> {
+      String brokerId = String.valueOf(id);
       KafkaBrokerJmxClient jmx = Model.getInstance().getKafkaBrokerJmxClient(id);
-
-      batchPoints.point(getTopicPointByMeasure(jmx, id, "BytesInPerSec"));
-      batchPoints.point(getTopicPointByMeasure(jmx, id, "TotalProduceRequestsPerSec"));
-      batchPoints.point(getTopicPointByMeasure(jmx, id, "FailedProduceRequestsPerSec"));
-      batchPoints.point(getTopicPointByMeasure(jmx, id, "TotalFetchRequestsPerSec"));
-      batchPoints.point(getTopicPointByMeasure(jmx, id, "BytesOutPerSec"));
-      batchPoints.point(getTopicPointByMeasure(jmx, id, "MessagesInPerSec"));
-      batchPoints.point(getTopicPointByMeasure(jmx, id, "FailedFetchRequestsPerSec"));
-      batchPoints.point(getTopicPointByMeasure(jmx, id, "BytesRejectedPerSec"));
+  
+      jmx.getObjectNamesByPattern("kafka.*:type=*,name=*").forEach(objectName -> {
+        String className = jmx.getClassName(objectName);
+        String name = objectName.getKeyProperty("name");
+        String type = objectName.getKeyProperty("type");
+        if (className.equals("com.yammer.metrics.reporting.JmxReporter$Meter")) {
+          batchPoints.point(Point.measurement("kafka-broker")
+            .tag("broker", brokerId)
+            .tag("type", type)
+            .addField(name, jmx.getMeterByObjectName(objectName).getMeanRate())
+            .build());
+        } else if (className.equals("com.yammer.metrics.reporting.JmxReporter$Gauge")) {
+          try {
+            Number number = (Number)jmx.getGaugeByName(objectName);
+            batchPoints.point(Point.measurement("kafka-broker")
+              .tag("broker", brokerId)
+              .tag("type", type)
+              .addField(name, number)
+              .build());
+          } catch (ClassCastException e) {}
+        } else {
+          // TODO: Unknown objectName type
+          System.out.println("Unknown class: " + className + " for object: " + objectName);
+        }
+      });
       
-      batchPoints.point(getTopicPartitionPointByMeasure(jmx, id, "LogStartOffset"));
-      batchPoints.point(getTopicPartitionPointByMeasure(jmx, id, "LogEndOffset"));
-      batchPoints.point(getTopicPartitionPointByMeasure(jmx, id, "NumLogSegments"));
-      batchPoints.point(getTopicPartitionPointByMeasure(jmx, id, "Size"));
-      batchPoints.point(getTopicPartitionPointByMeasure(jmx, id, "UnderReplicated"));
+      // Network (type=RequestMetrics)
+      jmx.getObjectNamesByPattern("kafka.*:type=RequestMetrics,name=*,request=*").forEach(objectName -> {
+        String name = objectName.getKeyProperty("name");
+        String request = objectName.getKeyProperty("request");
+        String className = jmx.getClassName(objectName);
+        if (className.equals("com.yammer.metrics.reporting.JmxReporter$Histogram")) {
+          batchPoints.point(Point
+            .measurement("kafka-broker-network")
+            .tag("broker", brokerId)
+            .tag("request", request)
+            .addField(name, jmx.getHistogramByObjectName(objectName).getMean())
+            .build());
+        } else if (className.equals("com.yammer.metrics.reporting.JmxReporter$Meter")) {
+          batchPoints.point(Point
+            .measurement("kafka-broker-network")
+            .tag("broker", brokerId)
+            .tag("request", request)
+            .addField(name, jmx.getMeterByObjectName(objectName).getMeanRate())
+            .build());
+        } else {
+          // TODO: Unknown objectName type
+          System.out.println("Unknown class: " + className + " for object: " + objectName);
+        }
+      });
+  
+      // Producers
+      // TODO: kafka.server:type=Produce,client-id=DemoProducer
       
+      
+      // Topic Metrics
+      Map<String, Point.Builder> topicPointMap = new HashMap<>();
+      jmx.getObjectNamesByPattern("kafka.*:type=*,name=*,topic=*").forEach(objectName -> {
+        String topic = objectName.getKeyProperty("topic");
+        String name = objectName.getKeyProperty("name");
+        JmxReporter.MeterMBean meter = jmx.getMeterByObjectName(objectName);
+        if (!topicPointMap.containsKey(topic)) {
+          topicPointMap.put(topic, Point
+            .measurement("kafka-broker-topic")
+            .tag("broker", brokerId)
+            .tag("topic", topic));
+        }
+        topicPointMap.get(topic).addField(name, meter.getMeanRate());
+      });
+      topicPointMap.forEach((topic, pointBuilder) -> {
+        batchPoints.point(pointBuilder.build());
+      });
+  
+      // Topic Partition Metrics
+      Map<String, Point.Builder> topicPartitionPointMap = new HashMap<>();
+      jmx.getObjectNamesByPattern("kafka.*:type=*,name=*,topic=*,partition=*").forEach(objectName -> {
+        String topic = objectName.getKeyProperty("topic");
+        String partition = objectName.getKeyProperty("partition");
+        String name = objectName.getKeyProperty("name");
+        JmxReporter.GaugeMBean gauge = jmx.getGaugeByObjectName(objectName);
+        Point.Builder pointBuilder;
+        String key = topic + "." + partition;
+        if (!topicPartitionPointMap.containsKey(key)) {
+          pointBuilder = Point
+            .measurement("kafka-broker-topic-partition")
+            .tag("broker", brokerId)
+            .tag("topic", topic)
+            .tag("partition", partition);
+          topicPartitionPointMap.put(key, pointBuilder);
+        } else {
+          pointBuilder = topicPartitionPointMap.get(key);
+        }
+        pointBuilder.addField(name, (Number)gauge.getValue());
+      });
+      topicPartitionPointMap.forEach((topicPartition, pointBuilder) -> {
+        batchPoints.point(pointBuilder.build());
+      });
     });
   }
+  
   public void logTopicCount() {
     Point point = Point.measurement("kafka-topic")
       .time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)

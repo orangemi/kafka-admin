@@ -200,6 +200,15 @@ public class KafkaBrokerJmxClient {
     return JMX.newMBeanProxy(connection, objectName, HistogramMBean.class);
   }
   
+  public String getClassName(ObjectName objectName) {
+    try {
+      return connection.getMBeanInfo(objectName).getClassName();
+    } catch (InstanceNotFoundException | IntrospectionException | IOException | ReflectionException e) {
+      e.printStackTrace();
+      return "";
+    }
+  }
+  
   public Map<String, KafkaDelayedProperty> getDelayOperations() {
     Map<String, KafkaDelayedProperty> result = new HashMap<>();
     result.put("Fetch", new KafkaDelayedProperty());

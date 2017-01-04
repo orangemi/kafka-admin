@@ -6,10 +6,12 @@ import kafka.api.LeaderAndIsr;
 import kafka.server.ConfigType;
 import kafka.utils.Json;
 import kafka.utils.ZkUtils;
+import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.zookeeper.data.Stat;
@@ -22,18 +24,16 @@ import java.util.Vector;
 
 public class Model {
   private static final String ADMIN_CONSUMER_GROUP_NAME = "kafka-admin-consumer";
+  private static final String ADMIN_CONSUMER_OFFSETS_GROUP_NAME = "kafka-admin-consumer-offset-reader";
   private String zkHost = "localhost:2181";
   private String kafkaHost = "localhost:9092";
-//  private static final String zkHost = "kafka01-cn.teambition.corp:2181";
-//  private static final String kafkaHost = "kafka01-cn.teambition.corp:9092";
-//  private static final String zkHost = "project.ci:32181";
-//  private static final String kafkaHost = "project.ci:39092";
   
   private static Model instance = null;
   private ZkUtils zkUtils;
   private AdminClient adminClient;
   private Consumer<String, String> adminConsumer;
-//  private Consumer<String, String> consumer;
+  private ConsumerManager consumerManager;
+  private Thread consumerThread;
   
   public static Model getInstance() {
     if (instance == null) throw new RuntimeException("instance not inited ...");
@@ -185,6 +185,10 @@ public class Model {
     return consumerModel;
   }
   
+  public Map<String, com.teambition.kafka.admin.model.Consumer> getAllConsumerV2s() {
+    return consumerManager.getConsumerList();
+  }
+ 
   public Collection<String> getConsumerV2s() {
     Collection<String> consumers = new Vector<>();
     JavaConversions.asJavaCollection(adminClient.listAllConsumerGroupsFlattened()).forEach(consumerGroup -> {
@@ -199,8 +203,9 @@ public class Model {
     JavaConversions.asJavaCollection(adminClient.describeConsumerGroup(group))
       .forEach(consumerSummary -> {
         JavaConversions.asJavaCollection(consumerSummary.assignment()).forEach(topicPartition -> {
-          long offset = consumer.committed(new TopicPartition(topicPartition.topic(), topicPartition.partition())).offset();
-          
+          OffsetAndMetadata offsetMeta = consumer.committed(new TopicPartition(topicPartition.topic(), topicPartition.partition()));
+          if (offsetMeta == null) return;
+          long offset = offsetMeta.offset();
           consumerModel.addTopicPartition(topicPartition, offset);
         });
         
@@ -217,7 +222,11 @@ public class Model {
   }
   
   public Collection<String> getZookeeperChildren(String path) {
-    return JavaConversions.asJavaCollection(zkUtils.getChildren(path));
+    try {
+      return JavaConversions.asJavaCollection(zkUtils.getChildren(path));
+    } catch (ZkNoNodeException e) {
+      return new Vector<>();
+    }
   }
   
   public Stat getZookeeperStat(String path) {
@@ -231,17 +240,22 @@ public class Model {
   }
 
   private void init() {
-    // TODO: should load config properties
     zkUtils = ZkUtils.apply(zkHost, 3000, 3000, false);
 
     // Create adminClient
     Properties adminProps = new Properties();
     adminProps.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaHost);
     adminClient = AdminClient.create(adminProps);
+
+    // Create a thread getting all consumer history
+    consumerManager = new ConsumerManager(kafkaHost);
+    consumerThread = new Thread(consumerManager);
+    consumerThread.setDaemon(true);
+    consumerThread.start();
   }
   
   private Consumer<String, String> createConsumer(String group) {
-    String deserializer = new StringDeserializer().getClass().getName();
+    String deserializer = StringDeserializer.class.getName();
   
     // Create Consumer
     Properties consumerProps = new Properties();
@@ -252,7 +266,6 @@ public class Model {
     consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, deserializer);
     consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
   
-    Consumer<String, String> consumer = new KafkaConsumer<>(consumerProps);
-    return consumer;
+    return new KafkaConsumer<>(consumerProps);
   }
 }

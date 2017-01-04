@@ -1,14 +1,11 @@
 apply plugin: 'java'
+apply plugin: 'application'
 
 repositories {
   jcenter()
 }
 
-task run (type: JavaExec, dependsOn: classes){
-  args('config/config.properties')
-  main = "com.teambition.kafka.admin.Main"
-  classpath = sourceSets.main.runtimeClasspath
-}
+mainClassName = "com.teambition.kafka.admin.Main"
 
 dependencies {
   compile 'org.slf4j:slf4j-api:1.7.21'
