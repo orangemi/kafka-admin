@@ -52,6 +52,18 @@ Please note that `JMX_PORT` should be assigned for kafka instance
 - see your result by grafana
 - visit [http://localhost:9001](http://localhost:9001)
 
+## rujning on Docker
+See and modify your `docker-compose.yml` and run `docker-compose up -d`
+```
+docker-compose up -d
+```
+
+## Build
+```
+gradle distTar
+docker build -t kafka-admin .
+```
+
 ## [WIP] API
 - [X] GET /brokers
 
