@@ -1,0 +1,10 @@
+version: '2'
+services:
+  kafka-admin:
+    image: kafka-admin-rest
+    container_name: kakfa-admin
+    volumes:
+      - ./config/config.properties:/kafka-admin-rest/config/config.properties
+    ports:
+      - 9001:9001
+

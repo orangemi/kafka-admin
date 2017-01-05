@@ -200,7 +200,7 @@ public class Model {
   public com.teambition.kafka.admin.model.Consumer getConsumerV2(String group) {
     com.teambition.kafka.admin.model.Consumer consumerModel = new com.teambition.kafka.admin.model.Consumer(group);
     Consumer<String, String> consumer = createConsumer(group);
-    JavaConversions.asJavaCollection(adminClient.describeConsumerGroup(group))
+    JavaConversions.asJavaCollection(adminClient.describeConsumerGroup(group).get())
       .forEach(consumerSummary -> {
         JavaConversions.asJavaCollection(consumerSummary.assignment()).forEach(topicPartition -> {
           OffsetAndMetadata offsetMeta = consumer.committed(new TopicPartition(topicPartition.topic(), topicPartition.partition()));
