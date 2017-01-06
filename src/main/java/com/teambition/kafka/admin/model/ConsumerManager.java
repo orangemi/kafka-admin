@@ -14,6 +14,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import java.nio.ByteBuffer;
@@ -81,6 +82,29 @@ public class ConsumerManager implements Runnable {
         }
       }
     }
+  }
+  
+  public void commitOffset2(String group, String clientId, String topic, int partition, long offset) {
+    String deserializer = ByteArrayDeserializer.class.getName();
+    Properties consumerProps = new Properties();
+    consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaHost);
+    consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, group);
+    consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+    consumerProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
+    consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+//    consumerProps.put(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, "false");
+    consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, deserializer);
+    consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
+  
+    KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProps);
+    consumer.assign(Arrays.asList(new TopicPartition(topic, partition)));
+  
+//    consumer.
+//    consumer.seek(new TopicPartition(topic, partition), offset);
+    Map<TopicPartition, org.apache.kafka.clients.consumer.OffsetAndMetadata> commitMeta = new HashMap<>();
+    commitMeta.put(new TopicPartition(topic, partition), new org.apache.kafka.clients.consumer.OffsetAndMetadata(offset));
+    consumer.commitSync(commitMeta);
+    consumer.close();
   }
   
   public void commitOffset(String group, String clientId, String topic, int partition, long offset) {

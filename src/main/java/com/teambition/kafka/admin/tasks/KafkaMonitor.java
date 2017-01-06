@@ -93,6 +93,8 @@ public class KafkaMonitor extends TimerTask {
       Model.getInstance().getConsumerV2(consumer).getOffsets().forEach((topicPartition, offset) -> {
         batchPoints.point(Point.measurement("consumer-offsets")
           .tag("group", consumer)
+          .tag("topic", topicPartition.topic())
+          .tag("partition", String.valueOf(topicPartition.partition()))
           .addField("offset", offset)
           .build()
         );
