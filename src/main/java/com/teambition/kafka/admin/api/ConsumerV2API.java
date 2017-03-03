@@ -1,24 +1,47 @@
 package com.teambition.kafka.admin.api;
 
-import com.teambition.kafka.admin.model.Consumer;
+import com.teambition.kafka.admin.model.ConsumerManager;
+import com.teambition.kafka.admin.model.ConsumerModel;
 import com.teambition.kafka.admin.model.Model;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
 
-@Path("/consumers-v2")
+@Path("/consumers2")
 public class ConsumerV2API {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Collection<String> getConsumers() {
-    return Model.getInstance().getConsumerV2s();
+    return Model.getInstance().getConsumerManager().getConsumerList().keySet();
   }
   
   @GET
   @Path("/{group}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Consumer getConsumerTopic(@PathParam("group") String group) {
-    return Model.getInstance().getConsumerV2(group);
+  public Collection<String> getConsumerDetail(@PathParam("group") String group) {
+    return Model.getInstance().getConsumerManager().getConsumerList().get(group).getOffsets().keySet();
+  }
+  
+  @GET
+  @Path("/{group}/{topic}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Collection<Integer> getConsumerTopic(@PathParam("group") String group, @PathParam("topic") String topic) {
+    return Model.getInstance().getConsumerManager().getConsumerList().get(group).getOffsets().get(topic).keySet();
+  }
+
+  @GET
+  @Path("/{group}/{topic}/{partition}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public long getConsumerTopicPartition(@PathParam("group") String group, @PathParam("topic") String topic, @PathParam("partition") int partition) {
+    return Model.getInstance().getConsumerManager().getConsumerList().get(group).getOffsets().get(topic).get(partition);
+  }
+  
+  @POST
+  @Path("/{group}/{topic}/{partition}")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public void postConsumerOffset(@PathParam("group") String group, @PathParam("topic") String topic, @PathParam("partition") int partition, long offset) {
+    System.out.println(offset);
+    Model.getInstance().getConsumerManager().commitOffset2(group, "connect-cluster", topic, partition, offset);
   }
 }

@@ -1,6 +1,6 @@
 package com.teambition.kafka.admin.api;
 
-import com.teambition.kafka.admin.model.Consumer;
+import com.teambition.kafka.admin.model.ConsumerModel;
 import com.teambition.kafka.admin.model.Model;
 
 import javax.ws.rs.*;
@@ -18,7 +18,7 @@ public class ConsumerAPI {
   @GET
   @Path("/{group}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Consumer getZkConsumerGroup(@PathParam("group") String group) {
+  public ConsumerModel getZkConsumerGroup(@PathParam("group") String group) {
     return Model.getInstance().getZkConsumerGroup(group);
   }
 }

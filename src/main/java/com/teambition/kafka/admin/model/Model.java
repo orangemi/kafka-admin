@@ -88,8 +88,8 @@ public class Model {
     Properties configs = AdminUtils.fetchEntityConfig(zkUtils, ConfigType.Topic(), topic);
     return configs;
   }
-  public Collection<Partition> getTopicPartitions(String topic) {
-    Collection<Partition> partitions = new Vector<>();
+  public Collection<TopicPartitionModel> getTopicPartitions(String topic) {
+    Collection<TopicPartitionModel> topicPartitionModels = new Vector<>();
     Map<Object, Seq<Object>> partitionMap
       = JavaConversions.mapAsJavaMap(
         zkUtils.getPartitionAssignmentForTopics(JavaConversions.asScalaBuffer(Arrays.asList(topic)))
@@ -98,19 +98,19 @@ public class Model {
     partitionMap.entrySet().forEach((entry) -> {
       int id = (Integer)entry.getKey();
 
-      // get partition end offset
+      // get topicPartitionModel end offset
       long beginOffset = getTopicPartitionOffset(topic, id, true);
       long endOffset = getTopicPartitionOffset(topic, id);
   
       Collection<PartitionReplica> replicas = new Vector<>();
-      Partition partition = new Partition(id, beginOffset, endOffset, replicas);
-      partitions.add(partition);
+      TopicPartitionModel topicPartitionModel = new TopicPartitionModel(topic, id, beginOffset, endOffset, replicas);
+      topicPartitionModels.add(topicPartitionModel);
       
       Option<LeaderAndIsr> leaderAndIsrOpt = zkUtils.getLeaderAndIsrForPartition(topic, id);
       if (leaderAndIsrOpt.isEmpty()) return;
 
       LeaderAndIsr leaderAndIsr = leaderAndIsrOpt.get();
-      partition.setLeader(leaderAndIsr.leader());
+      topicPartitionModel.setLeader(leaderAndIsr.leader());
   
       JavaConversions.asJavaCollection(entry.getValue()).forEach(brokerObj -> {
         int broker = (Integer)brokerObj;
@@ -123,7 +123,7 @@ public class Model {
       });
     });
 
-    return partitions;
+    return topicPartitionModels;
   }
   
   public Collection<String> getConsumerGroups() {
@@ -170,8 +170,8 @@ public class Model {
     return offset;
   }
   
-  public com.teambition.kafka.admin.model.Consumer getZkConsumerGroup(String group) {
-    com.teambition.kafka.admin.model.Consumer consumerModel = new com.teambition.kafka.admin.model.Consumer(group);
+  public ConsumerModel getZkConsumerGroup(String group) {
+    ConsumerModel consumerModelModel = new ConsumerModel(group);
     Collection<String> topics = getZookeeperChildren("/consumers/" + group + "/offsets");
     topics.forEach(topic -> {
       Collection<String> partitions = getZookeeperChildren("/consumers/" + group + "/offsets/" + topic);
@@ -179,13 +179,13 @@ public class Model {
         int partition = Integer.valueOf(partitionString);
         String offsetString = getZookeeperData("/consumers/" + group + "/offsets/" + topic + "/" + partitionString);
         long offset = Long.valueOf(offsetString);
-        consumerModel.addTopicPartition(new TopicPartition(topic, partition), offset);
+        consumerModelModel.addTopicPartition(new TopicPartition(topic, partition), offset);
       });
     });
-    return consumerModel;
+    return consumerModelModel;
   }
   
-  public Map<String, com.teambition.kafka.admin.model.Consumer> getAllConsumerV2s() {
+  public Map<String, ConsumerModel> getAllConsumerV2s() {
     return consumerManager.getConsumerList();
   }
  
@@ -197,8 +197,8 @@ public class Model {
     return consumers;
   }
   
-  public com.teambition.kafka.admin.model.Consumer getConsumerV2(String group) {
-    com.teambition.kafka.admin.model.Consumer consumerModel = new com.teambition.kafka.admin.model.Consumer(group);
+  public ConsumerModel getConsumerV2(String group) {
+    ConsumerModel consumerModelModel = new ConsumerModel(group);
     Consumer<String, String> consumer = createConsumer(group);
     JavaConversions.asJavaCollection(adminClient.describeConsumerGroup(group).get())
       .forEach(consumerSummary -> {
@@ -206,12 +206,12 @@ public class Model {
           OffsetAndMetadata offsetMeta = consumer.committed(new TopicPartition(topicPartition.topic(), topicPartition.partition()));
           if (offsetMeta == null) return;
           long offset = offsetMeta.offset();
-          consumerModel.addTopicPartition(topicPartition, offset);
+          consumerModelModel.addTopicPartition(topicPartition, offset);
         });
         
       });
     consumer.close();
-    return consumerModel;
+    return consumerModelModel;
   }
   
   public boolean setConsumerV2(String group, String topic, int partition, long offset) {
@@ -257,7 +257,7 @@ public class Model {
   private Consumer<String, String> createConsumer(String group) {
     String deserializer = StringDeserializer.class.getName();
   
-    // Create Consumer
+    // Create ConsumerModel
     Properties consumerProps = new Properties();
     consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaHost);
     consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, group);
@@ -267,5 +267,9 @@ public class Model {
     consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
   
     return new KafkaConsumer<>(consumerProps);
+  }
+  
+  public ConsumerManager getConsumerManager() {
+    return consumerManager;
   }
 }

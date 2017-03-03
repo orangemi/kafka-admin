@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Properties;
 
-public class Topic {
+public class TopicModel {
   private String name;
   private int partitions;
   private Properties configs;
-  public Topic(String name, int partitions, Properties configs) {
+  public TopicModel(String name, int partitions, Properties configs) {
     this.name = name;
     this.partitions = partitions;
     this.configs = configs;

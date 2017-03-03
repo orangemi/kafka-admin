@@ -26,7 +26,7 @@ import java.util.Arrays;
 
 public class ConsumerManager implements Runnable {
   
-  private Map<String, com.teambition.kafka.admin.model.Consumer> consumerMap = new HashMap<>();
+  private Map<String, ConsumerModel> consumerMap = new HashMap<>();
   private String kafkaHost;
   private static final String OFFSET_CONSUMER_GROUP = "kafka-admin-offset-reader";
   private Consumer<byte[], byte[]> offsetConsumer;
@@ -35,7 +35,7 @@ public class ConsumerManager implements Runnable {
     this.kafkaHost = kafkaHost;
   }
   
-  public Map<String, com.teambition.kafka.admin.model.Consumer> getConsumerList() {
+  public Map<String, ConsumerModel> getConsumerList() {
     return consumerMap;
   }
   
@@ -60,14 +60,21 @@ public class ConsumerManager implements Runnable {
         Object key = GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
         if (key instanceof OffsetKey) {
           GroupTopicPartition groupTopicPartition = ((OffsetKey) key).key();
-          if (!consumerMap.containsKey(groupTopicPartition.group())) {
-            consumerMap.put(groupTopicPartition.group(), new com.teambition.kafka.admin.model.Consumer(groupTopicPartition.group()));
+          String group = groupTopicPartition.group();
+          if (!consumerMap.containsKey(group)) {
+            consumerMap.put(groupTopicPartition.group(), new ConsumerModel(group));
           }
-          if (record.value() == null) {
-            consumerMap.get(groupTopicPartition.group()).addTopicPartition(groupTopicPartition.topicPartition(), 0L);
+
+          if (consumerMap.get(group) != null && record.value() == null) {
+            consumerMap.get(group).addTopicPartition(groupTopicPartition.topicPartition(), 0L);
           } else {
             OffsetAndMetadata value = GroupMetadataManager.readOffsetMessageValue(ByteBuffer.wrap(record.value()));
             consumerMap.get(groupTopicPartition.group()).addTopicPartition(groupTopicPartition.topicPartition(), value.offset());
+          }
+  
+          // remove consumer if consumer's offset all removed
+          if (consumerMap.get(group).getOffsets().size() == 0) {
+            consumerMap.remove(group);
           }
 //          System.out.println("record: partition: " + record.partition()  + " offset:" + record.offset() + " : " + count);
 //          System.out.println("  group: " + ((OffsetKey) key).key().group());

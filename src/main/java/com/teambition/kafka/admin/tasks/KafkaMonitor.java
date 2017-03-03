@@ -69,7 +69,7 @@ public class KafkaMonitor extends TimerTask {
   
     logTopicCount();
     
-    // Topic Partition
+    // TopicModel TopicPartitionModel
     Model.getInstance().getTopicCollections().forEach(topic -> {
       Model.getInstance().getTopicPartitions(topic).forEach(partition -> {
         batchPoints.point(Point.measurement("topic-start-offsets")
@@ -90,25 +90,29 @@ public class KafkaMonitor extends TimerTask {
   
     // Consumers2
     Model.getInstance().getConsumerV2s().forEach(consumer -> {
-      Model.getInstance().getConsumerV2(consumer).getOffsets().forEach((topicPartition, offset) -> {
-        batchPoints.point(Point.measurement("consumer-offsets")
-          .tag("group", consumer)
-          .tag("topic", topicPartition.topic())
-          .tag("partition", String.valueOf(topicPartition.partition()))
-          .addField("offset", offset)
-          .build()
-        );
+      Model.getInstance().getConsumerV2(consumer).getOffsets().forEach((topic, paritionOffsets) -> {
+        paritionOffsets.forEach((partition, offset) -> {
+          batchPoints.point(Point.measurement("consumer-offsets")
+            .tag("group", consumer)
+            .tag("topic", topic)
+            .tag("partition", String.valueOf(partition))
+            .addField("offset", offset)
+            .build()
+          );
+        });
       });
     });
   
-    // Consumer
+    // ConsumerModel
     Model.getInstance().getConsumerGroups().forEach(consumer -> {
-      Model.getInstance().getZkConsumerGroup(consumer).getOffsets().forEach((topicPartition, offset) -> {
-        batchPoints.point(Point.measurement("consumer-offsets")
-          .tag("group", consumer)
-          .addField("offset", offset)
-          .build()
-        );
+      Model.getInstance().getZkConsumerGroup(consumer).getOffsets().forEach((topic, partitionOffsets) -> {
+        partitionOffsets.forEach((partition, offset) -> {
+          batchPoints.point(Point.measurement("consumer-offsets")
+            .tag("group", consumer)
+            .addField("offset", offset)
+            .build()
+          );
+        });
       });
     });
   
@@ -181,7 +185,7 @@ public class KafkaMonitor extends TimerTask {
       // TODO: kafka.server:type=Produce,client-id=DemoProducer
       
       
-      // Topic Metrics
+      // TopicModel Metrics
       Map<String, Point.Builder> topicPointMap = new HashMap<>();
       jmx.getObjectNamesByPattern("kafka.*:type=*,name=*,topic=*").forEach(objectName -> {
         String topic = objectName.getKeyProperty("topic");
@@ -199,7 +203,7 @@ public class KafkaMonitor extends TimerTask {
         batchPoints.point(pointBuilder.build());
       });
   
-      // Topic Partition Metrics
+      // TopicModel TopicPartitionModel Metrics
       Map<String, Point.Builder> topicPartitionPointMap = new HashMap<>();
       jmx.getObjectNamesByPattern("kafka.*:type=*,name=*,topic=*,partition=*").forEach(objectName -> {
         String topic = objectName.getKeyProperty("topic");

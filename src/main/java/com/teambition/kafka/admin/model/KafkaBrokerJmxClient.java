@@ -260,7 +260,7 @@ public class KafkaBrokerJmxClient {
     return getTopicPartitionsOffsetMetrics("log", "Log", "NumLogSegments");
   }
   public Map<TopicPartition, Long> getTopicPartitionsUnderReplicatedMetrics() {
-    return getTopicPartitionsOffsetMetrics("cluster", "Partition", "UnderReplicated");
+    return getTopicPartitionsOffsetMetrics("cluster", "TopicPartitionModel", "UnderReplicated");
   }
   
   protected Map<TopicPartition, Long> getTopicPartitionsOffsetMetrics(String className, String type, String name) {

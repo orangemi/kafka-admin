@@ -1,8 +1,8 @@
 package com.teambition.kafka.admin.api;
 
 import com.teambition.kafka.admin.model.Model;
-import com.teambition.kafka.admin.model.Partition;
-import com.teambition.kafka.admin.model.Topic;
+import com.teambition.kafka.admin.model.TopicModel;
+import com.teambition.kafka.admin.model.TopicPartitionModel;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -20,12 +20,12 @@ public class TopicAPI {
   @GET
   @Path("/{topic}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Topic getTopic(@PathParam("topic") String topic) {
-    Topic topicEntity = new Topic(
+  public TopicModel getTopic(@PathParam("topic") String topic) {
+    TopicModel topicModelEntity = new TopicModel(
       topic,
       Model.getInstance().getTopicPartitions(topic).size(),
       Model.getInstance().getTopicConfig(topic));
-    return topicEntity;
+    return topicModelEntity;
   }
 
   @GET
@@ -38,14 +38,27 @@ public class TopicAPI {
   @GET
   @Path("/{topic}/partitions")
   @Produces(MediaType.APPLICATION_JSON)
-  public Collection<Partition> getPartitions(@PathParam("topic") String topic) {
+  public Collection<TopicPartitionModel> getPartitions(@PathParam("topic") String topic) {
     return Model.getInstance().getTopicPartitions(topic);
   }
   
   @GET
-  @Path("/{topic}/consumers")
+  @Path("/{topic}/partitions/{partition}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Collection<String> getConsumers(@PathParam("topic") String topic) {
-    return Model.getInstance().getZkConsumerGroupsByTopic(topic);
+  public TopicPartitionModel getPartitions(@PathParam("topic") String topic, @PathParam("partition") int partition) {
+    return Model
+      .getInstance()
+      .getTopicPartitions(topic)
+      .stream()
+      .filter(p -> p.getId() == partition)
+      .findAny()
+      .get();
   }
+  
+//  @GET
+//  @Path("/{topic}/consumers")
+//  @Produces(MediaType.APPLICATION_JSON)
+//  public Collection<String> getConsumers(@PathParam("topic") String topic) {
+//    return Model.getInstance().getZkConsumerGroupsByTopic(topic);
+//  }
 }

@@ -68,15 +68,21 @@ docker build -t kafka-admin .
 - [X] GET /brokers
 
 - [X] GET /topics
-- [X] GET /topics/:name
-- [X] GET /topics/:name/configs
-- [X] GET /topics/:name/partitions
+- [X] GET /topics/:topic
+- [X] GET /topics/:topic/configs
+- [ ] POST /topics/:topic/configs
+- [X] GET /topics/:topic/partitions
+- [X] GET /topics/:topic/partitions/:partition
 
 - [X] GET /consumers
 - [X] GET /consumers/:group
 
-- [X] GET /consumers-v2
-- [X] GET /consumers-v2/:group
+- [X] GET /consumers2
+- [X] GET /consumers2/:group
+- [X] GET /consumers2/:group/:topic
+- [X] GET /consumers2/:group/:topic/:partition
+- [X] POST /consumers2/:group/:topic/:partition
+提交offset, 提交0为删除
 
 - [X] GET /zookeeper/*
 

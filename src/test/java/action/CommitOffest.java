@@ -27,7 +27,7 @@ public class CommitOffest {
   
     String kafkaHost = "kafka01-cn.teambition.corp:9092,kafka02-cn.teambition.corp:9092";
     String groupId = "sample-consumer";
-    String topic = "core-actionlog-post";
+    String topic = "core-actionlog-post2";
   
     Properties props = new Properties();
     String deserializer = ByteArrayDeserializer.class.getName();
@@ -42,8 +42,8 @@ public class CommitOffest {
     KafkaConsumer<byte[], byte[]> consumer;
     consumer = new KafkaConsumer(props);
 //    consumer.subscribe(Arrays.asList(topic));
-    consumer.assign(Arrays.asList(new TopicPartition(topic, 1)));
-    consumer.seek(new TopicPartition(topic, 1), 9187500 /* 9187981 /* 17587280L */);
+    consumer.assign(Arrays.asList(new TopicPartition(topic, 0)));
+    consumer.seek(new TopicPartition(topic, 0), 2587110 /* 9187981 /* 17587280L */);
     Iterator<ConsumerRecord<byte[], byte[]>> iterator = consumer.poll(50000).iterator();
     while (iterator.hasNext()) {
       ConsumerRecord<byte[], byte[]> record = iterator.next();
@@ -64,20 +64,22 @@ public class CommitOffest {
 //    long offset = 820L * 1000;
 //
     String kafkaHost = "kafka01-cn.teambition.corp:9092,kafka02-cn.teambition.corp:9092";
+//    String groupId = "connect-core-actionlog-sink2";
     String groupId = "actionlog";
+//    String topic = "core-actionlog-post2";
     String topic = "core-actionlog";
 //    int partition = 1;
 //    long offset = 9187981;
 
     ConsumerManager cm = new ConsumerManager(kafkaHost);
-    cm.commitOffset2(groupId, "connect-cluster", topic, 0, 1149282);
-    cm.commitOffset2(groupId, "connect-cluster", topic, 1, 1148073);
-    cm.commitOffset2(groupId, "connect-cluster", topic, 2, 1147660);
-    cm.commitOffset2(groupId, "connect-cluster", topic, 3, 1148565);
-    cm.commitOffset2(groupId, "connect-cluster", topic, 4, 1149446);
-    cm.commitOffset2(groupId, "connect-cluster", topic, 5, 1149993);
-    cm.commitOffset2(groupId, "connect-cluster", topic, 6, 1148332);
-    cm.commitOffset2(groupId, "connect-cluster", topic, 7, 1149822);
+    cm.commitOffset2(groupId, "connect-cluster", topic, 0, 1547669);
+    cm.commitOffset2(groupId, "connect-cluster", topic, 1, 1545191);
+    cm.commitOffset2(groupId, "connect-cluster", topic, 2, 1545273);
+    cm.commitOffset2(groupId, "connect-cluster", topic, 3, 1546311);
+    cm.commitOffset2(groupId, "connect-cluster", topic, 4, 1548221);
+    cm.commitOffset2(groupId, "connect-cluster", topic, 5, 1548242);
+    cm.commitOffset2(groupId, "connect-cluster", topic, 6, 1547092);
+    cm.commitOffset2(groupId, "connect-cluster", topic, 7, 1548302);
   }
   
 }
