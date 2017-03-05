@@ -1,10 +1,13 @@
 version: '2'
 services:
   kafka-admin:
-    image: kafka-admin-rest
+    image: ka
+    network_mode: bridge
     container_name: kakfa-admin
-    volumes:
-      - ./config/config.properties:/kafka-admin-rest/config/config.properties
+    #environment:
+    external_links:
+      - zk:zk
+      - kafka1:kafka
     ports:
       - 9001:9001
 
