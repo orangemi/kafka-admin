@@ -1,7 +1,7 @@
 version: '2'
 services:
   kafka-admin:
-    image: ka
+    build: .
     network_mode: bridge
     container_name: kakfa-admin
     #environment:

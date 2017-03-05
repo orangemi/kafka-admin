@@ -8,7 +8,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 public class SampleProducer {
-  private static final String KAFKA_HOST = "project.ci:29092";
+  private static final String KAFKA_HOST = "localhost:9092";
   private static final String KAFKA_TOPIC = "sample";
 
   private KafkaProducer producer;
