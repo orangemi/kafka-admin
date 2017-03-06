@@ -7,6 +7,10 @@ import org.glassfish.jersey.filter.LoggingFilter;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.logging.LoggingFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.server.monitoring.ApplicationEvent;
+import org.glassfish.jersey.server.monitoring.ApplicationEventListener;
+import org.glassfish.jersey.server.monitoring.RequestEvent;
+import org.glassfish.jersey.server.monitoring.RequestEventListener;
 import org.glassfish.jersey.servlet.ServletContainer;
 
 import java.util.Properties;
@@ -32,9 +36,37 @@ public class WebServer {
   
   public void start() {
     ResourceConfig config = new ResourceConfig();
+    config.register(new ApplicationEventListener() {
+      @Override
+      public void onEvent(ApplicationEvent event) {
+    
+      }
+  
+      @Override
+      public RequestEventListener onRequest(RequestEvent requestEvent) {
+        return new RequestEventListener() {
+          @Override
+          public void onEvent(RequestEvent event) {
+            // System.out.println(event.getType());
+            switch (event.getType()) {
+              case FINISHED:
+                System.out.println(
+                  event.getContainerRequest().getMethod() +
+                  " " +
+                  event.getContainerRequest().getRequestUri().getPath() +
+                  " " +
+                  event.getContainerResponse().getStatus());
+            }
+          }
+        };
+      }
+  
+    });
     config.register(JacksonFeature.class);
     config.packages("com.teambition.kafka.admin.api");
-    config.register(LoggingFeature.class);
+//    config.register(LoggingFeature.class);
+//    config.property(LoggingFeature.LOGGING_FEATURE_VERBOSITY_SERVER, LoggingFeature.Verbosity.PAYLOAD_ANY);
+//    config.registerInstances(new LoggingFilter())
     ServletHolder servlet = new ServletHolder(new ServletContainer(config));
   
     server = new Server(port);
