@@ -3,7 +3,9 @@ package com.teambition.kafka.admin.tasks;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.glassfish.jersey.filter.LoggingFilter;
 import org.glassfish.jersey.jackson.JacksonFeature;
+import org.glassfish.jersey.logging.LoggingFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 
@@ -32,6 +34,7 @@ public class WebServer {
     ResourceConfig config = new ResourceConfig();
     config.register(JacksonFeature.class);
     config.packages("com.teambition.kafka.admin.api");
+    config.register(LoggingFeature.class);
     ServletHolder servlet = new ServletHolder(new ServletContainer(config));
   
     server = new Server(port);

@@ -8,6 +8,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.Vector;
 
 @Path("/topics")
 public class TopicAPI {
@@ -23,7 +24,7 @@ public class TopicAPI {
   public TopicModel getTopic(@PathParam("topic") String topic) {
     TopicModel topicModelEntity = new TopicModel(
       topic,
-      Model.getInstance().getTopicPartitions(topic).size(),
+      Model.getInstance().getTopicPartitions(topic),
       Model.getInstance().getTopicConfig(topic));
     return topicModelEntity;
   }
@@ -36,23 +37,30 @@ public class TopicAPI {
   }
   
   @GET
+  @Path("/{topic}/consumers2")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Collection<String> getConsumers2ByTopic(@PathParam("topic") String topic) {
+    Collection<String> result = new Vector<>();
+    Model.getInstance().getConsumerManager().getConsumerList().forEach((name, consumer) -> {
+      if (consumer.getOffsets().containsKey(topic)) {
+        result.add(consumer.getGroup());
+      }
+    });
+    return result;
+  }
+
+  @GET
   @Path("/{topic}/partitions")
   @Produces(MediaType.APPLICATION_JSON)
   public Collection<TopicPartitionModel> getPartitions(@PathParam("topic") String topic) {
-    return Model.getInstance().getTopicPartitions(topic);
+    return Model.getInstance().getTopicPartitionDetails(topic);
   }
   
   @GET
   @Path("/{topic}/partitions/{partition}")
   @Produces(MediaType.APPLICATION_JSON)
-  public TopicPartitionModel getPartitions(@PathParam("topic") String topic, @PathParam("partition") int partition) {
-    return Model
-      .getInstance()
-      .getTopicPartitions(topic)
-      .stream()
-      .filter(p -> p.getId() == partition)
-      .findAny()
-      .get();
+  public TopicPartitionModel getPartition(@PathParam("topic") String topic, @PathParam("partition") int partition) {
+    return Model.getInstance().getTopicPartition(topic, partition);
   }
   
 //  @GET

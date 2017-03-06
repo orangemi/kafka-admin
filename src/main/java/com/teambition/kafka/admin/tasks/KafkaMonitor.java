@@ -71,7 +71,7 @@ public class KafkaMonitor extends TimerTask {
     
     // TopicModel TopicPartitionModel
     Model.getInstance().getTopicCollections().forEach(topic -> {
-      Model.getInstance().getTopicPartitions(topic).forEach(partition -> {
+      Model.getInstance().getTopicPartitionDetails(topic).forEach(partition -> {
         batchPoints.point(Point.measurement("topic-start-offsets")
           .tag("topic", topic)
           .tag("partition", "" + partition.getId())

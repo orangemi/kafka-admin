@@ -39,7 +39,7 @@ public class ConsumerV2API {
   }
   
   @GET
-  @Path("/{group}/topics/{topic}/paritions")
+  @Path("/{group}/topics/{topic}/partitions")
   @Produces(MediaType.APPLICATION_JSON)
   public Collection<Integer> getConsumerPartitions(@PathParam("group") String group, @PathParam("topic") String topic) {
     return Model.getInstance().getConsumerManager().getConsumerList().get(group).getOffsets().get(topic).keySet();

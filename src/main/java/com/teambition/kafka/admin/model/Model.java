@@ -34,6 +34,7 @@ public class Model {
   private Consumer<String, String> adminConsumer;
   private ConsumerManager consumerManager;
   private Thread consumerThread;
+  private int adminConsumerCount = 0;
   
   public static Model getInstance() {
     if (instance == null) throw new RuntimeException("instance not inited ...");
@@ -88,32 +89,22 @@ public class Model {
     Properties configs = AdminUtils.fetchEntityConfig(zkUtils, ConfigType.Topic(), topic);
     return configs;
   }
-  public Collection<TopicPartitionModel> getTopicPartitions(String topic) {
-    Collection<TopicPartitionModel> topicPartitionModels = new Vector<>();
-    Map<Object, Seq<Object>> partitionMap
-      = JavaConversions.mapAsJavaMap(
-        zkUtils.getPartitionAssignmentForTopics(JavaConversions.asScalaBuffer(Arrays.asList(topic)))
-          .get(topic)
-          .get());
-    partitionMap.entrySet().forEach((entry) -> {
-      int id = (Integer)entry.getKey();
-
-      // get topicPartitionModel end offset
-      long beginOffset = getTopicPartitionOffset(topic, id, true);
-      long endOffset = getTopicPartitionOffset(topic, id);
+  public TopicPartitionModel getTopicPartition(String topic, int partition) {
+    long beginOffset = getTopicPartitionOffset(topic, partition, true);
+    long endOffset = getTopicPartitionOffset(topic, partition);
   
-      Collection<PartitionReplica> replicas = new Vector<>();
-      TopicPartitionModel topicPartitionModel = new TopicPartitionModel(topic, id, beginOffset, endOffset, replicas);
-      topicPartitionModels.add(topicPartitionModel);
-      
-      Option<LeaderAndIsr> leaderAndIsrOpt = zkUtils.getLeaderAndIsrForPartition(topic, id);
-      if (leaderAndIsrOpt.isEmpty()) return;
-
+    Collection<PartitionReplica> replicas = new Vector<>();
+    TopicPartitionModel topicPartitionModel = new TopicPartitionModel(topic, partition, beginOffset, endOffset, replicas);
+//    topicPartitionModels.add(topicPartitionModel);
+  
+    Option<LeaderAndIsr> leaderAndIsrOpt = zkUtils.getLeaderAndIsrForPartition(topic, partition);
+    if (!leaderAndIsrOpt.isEmpty()) {
+  
       LeaderAndIsr leaderAndIsr = leaderAndIsrOpt.get();
       topicPartitionModel.setLeader(leaderAndIsr.leader());
   
-      JavaConversions.asJavaCollection(entry.getValue()).forEach(brokerObj -> {
-        int broker = (Integer)brokerObj;
+      JavaConversions.asJavaCollection(zkUtils.getReplicasForPartition(topic, partition)).forEach(brokerObj -> {
+        int broker = (Integer) brokerObj;
         PartitionReplica replica = new PartitionReplica(
           broker,
           broker == leaderAndIsr.leader(),
@@ -121,6 +112,28 @@ public class Model {
         );
         replicas.add(replica);
       });
+    }
+    
+    return topicPartitionModel;
+    
+  }
+  
+  public int getTopicPartitions(String topic) {
+    return JavaConversions.mapAsJavaMap(
+      zkUtils.getPartitionAssignmentForTopics(JavaConversions.asScalaBuffer(Arrays.asList(topic)))
+        .get(topic)
+        .get()).size();
+  }
+  public Collection<TopicPartitionModel> getTopicPartitionDetails(String topic) {
+    Collection<TopicPartitionModel> topicPartitionModels = new Vector<>();
+    Map<Object, Seq<Object>> partitionMap
+      = JavaConversions.mapAsJavaMap(
+        zkUtils.getPartitionAssignmentForTopics(JavaConversions.asScalaBuffer(Arrays.asList(topic)))
+          .get(topic)
+          .get());
+    partitionMap.entrySet().forEach((entry) -> {
+      int partition = (Integer)entry.getKey();
+      topicPartitionModels.add(getTopicPartition(topic, partition));
     });
 
     return topicPartitionModels;
@@ -160,13 +173,15 @@ public class Model {
     TopicPartition topicPartition = new TopicPartition(topic, partition);
     Collection<TopicPartition> topicPartitions = new Vector<>();
     topicPartitions.add(topicPartition);
-    getAdminConsumer().assign(topicPartitions);
+    Consumer consumer = createConsumer(ADMIN_CONSUMER_GROUP_NAME + "-" + adminConsumerCount++);
+    consumer.assign(topicPartitions);
     if (seekBeginning) {
-      getAdminConsumer().seekToBeginning(topicPartitions);
+      consumer.seekToBeginning(topicPartitions);
     } else {
-      getAdminConsumer().seekToEnd(topicPartitions);
+      consumer.seekToEnd(topicPartitions);
     }
-    long offset = getAdminConsumer().position(topicPartition);
+    long offset = consumer.position(topicPartition);
+    consumer.close();
     return offset;
   }
   
