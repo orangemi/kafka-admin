@@ -18,9 +18,11 @@ import java.util.Properties;
 public class WebServer {
   public final static String CONFIG_PREFIX = "webserver";
   public final static String PORT_CONFIG = "webserver.port";
+  public final static String PREFIX_CONFIG = "webserver.prefix";
   private Properties properties;
   private int port = 9001;
   private Server server;
+  private String prefix = "/";
   public WebServer() {}
 
   public WebServer(int port) {
@@ -32,6 +34,7 @@ public class WebServer {
     this();
     this.properties = properties;
     this.port = Integer.valueOf(properties.getProperty(PORT_CONFIG));
+    this.prefix = properties.getProperty(PREFIX_CONFIG);
   }
   
   public void start() {
@@ -71,7 +74,7 @@ public class WebServer {
   
     server = new Server(port);
     ServletContextHandler context = new ServletContextHandler(server, "/*");
-    context.addServlet(servlet, "/*");
+    context.addServlet(servlet, this.prefix + "*");
   
     try {
       System.out.println("Server start ...");
