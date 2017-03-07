@@ -50,15 +50,19 @@ public class WebServer {
         return new RequestEventListener() {
           @Override
           public void onEvent(RequestEvent event) {
-            // System.out.println(event.getType());
-            switch (event.getType()) {
-              case FINISHED:
-                System.out.println(
-                  event.getContainerRequest().getMethod() +
-                  " " +
-                  event.getContainerRequest().getRequestUri().getPath() +
-                  " " +
-                  event.getContainerResponse().getStatus());
+            try {
+              // System.out.println(event.getType());
+              switch (event.getType()) {
+                case FINISHED:
+                  System.out.println(
+                    event.getContainerRequest().getMethod() +
+                      " " +
+                      event.getContainerRequest().getRequestUri().getPath() +
+                      " " +
+                      event.getContainerResponse().getStatus());
+              }
+            } catch (Exception e) {
+              e.printStackTrace();
             }
           }
         };

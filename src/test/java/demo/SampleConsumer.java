@@ -14,7 +14,7 @@ import java.util.Iterator;
 import java.util.Properties;
 
 public class SampleConsumer {
-  private static final String KAFKA_HOST = "localhost:9092";
+  private static final String KAFKA_HOST = "project.ci:29092";
   private static final String KAFKA_TOPIC = "sample";
   private static final String GROUP_ID = "sample-consumer";
   

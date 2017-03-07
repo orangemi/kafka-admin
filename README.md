@@ -71,6 +71,7 @@ docker build -t kafka-admin .
 - [X] GET /topics/:topic
 - [X] GET /topics/:topic/configs
 - [ ] POST /topics/:topic/configs
+- [ ] POST /topics/:topic/reassign
 - [X] GET /topics/:topic/partitions
 - [X] GET /topics/:topic/partitions/:partition
 

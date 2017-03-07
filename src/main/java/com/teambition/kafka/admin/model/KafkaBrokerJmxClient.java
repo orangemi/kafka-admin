@@ -17,6 +17,7 @@ import java.util.Set;
 import com.yammer.metrics.reporting.JmxReporter.MeterMBean;
 import com.yammer.metrics.reporting.JmxReporter.GaugeMBean;
 import com.yammer.metrics.reporting.JmxReporter.HistogramMBean;
+import com.yammer.metrics.reporting.JmxReporter.TimerMBean;
 
 public class KafkaBrokerJmxClient {
   protected MBeanServerConnection connection;
@@ -198,6 +199,10 @@ public class KafkaBrokerJmxClient {
 
   public HistogramMBean getHistogramByObjectName(ObjectName objectName) {
     return JMX.newMBeanProxy(connection, objectName, HistogramMBean.class);
+  }
+  
+  public TimerMBean getTimerMBean(ObjectName objectName) {
+    return JMX.newMBeanProxy(connection, objectName, TimerMBean.class);
   }
   
   public String getClassName(ObjectName objectName) {

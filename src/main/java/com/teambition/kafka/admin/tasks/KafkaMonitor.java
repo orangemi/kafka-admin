@@ -2,6 +2,7 @@ package com.teambition.kafka.admin.tasks;
 
 import com.teambition.kafka.admin.model.KafkaBrokerJmxClient;
 import com.teambition.kafka.admin.model.Model;
+import com.teambition.kafka.admin.model.TopicPartitionModel;
 import com.yammer.metrics.reporting.JmxReporter;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
@@ -15,6 +16,7 @@ public class KafkaMonitor extends TimerTask {
   
   private Properties properties;
   private boolean enable = true;
+  private boolean running = false;
   private int round = 0;
   private String dbUrl = "http://localhost:8086";
   private String dbUser = "root";
@@ -58,12 +60,24 @@ public class KafkaMonitor extends TimerTask {
   
   @Override
   public void run() {
+    try {
+      if (running) return;
+      running = true;
+      _run();
+      running = false;
+    } catch (Exception ex) {
+      ex.printStackTrace();
+      db = null;
+      running = false;
+    }
+  }
+  
+  public void _run() {
     round++;
     connect();
     System.out.println("Start gather info (round: " + round + ") ...");
     batchPoints = BatchPoints
       .database(dbName)
-      .retentionPolicy("autogen")
       .consistency(InfluxDB.ConsistencyLevel.ALL)
       .build();
   
@@ -71,21 +85,17 @@ public class KafkaMonitor extends TimerTask {
     
     // TopicModel TopicPartitionModel
     Model.getInstance().getTopicCollections().forEach(topic -> {
-      Model.getInstance().getTopicPartitionDetails(topic).forEach(partition -> {
-        batchPoints.point(Point.measurement("topic-start-offsets")
+      int partitions = Model.getInstance().getTopicPartitions(topic);
+      for (int partition = 0; partition < partitions; partition++) {
+        TopicPartitionModel topicPartitionModel = Model.getInstance().getTopicPartition(topic, partition);
+        batchPoints.point(Point.measurement("topic-offsets")
           .tag("topic", topic)
-          .tag("partition", "" + partition.getId())
-          .addField("offset", partition.getBeginOffset())
+          .tag("partition", String.valueOf(partition))
+          .addField("beginOffset", topicPartitionModel.getBeginOffset())
+          .addField("endOffset", topicPartitionModel.getEndOffset())
           .build()
         );
-        batchPoints.point(Point.measurement("topic-end-offsets")
-          .tag("topic", topic)
-          .tag("partition", "" + partition.getId())
-          .addField("offset", partition.getEndOffset())
-          .build()
-        );
-
-      });
+      }
     });
   
     // Consumers2
@@ -109,6 +119,8 @@ public class KafkaMonitor extends TimerTask {
         partitionOffsets.forEach((partition, offset) -> {
           batchPoints.point(Point.measurement("consumer-offsets")
             .tag("group", consumer)
+            .tag("topic", topic)
+            .tag("partition", String.valueOf(partition))
             .addField("offset", offset)
             .build()
           );
@@ -118,12 +130,12 @@ public class KafkaMonitor extends TimerTask {
   
     logBrokers();
     db.write(batchPoints);
+    running = false;
   }
   
   public void logBrokers() {
     // broker count
     batchPoints.point(Point.measurement("kafka-broker")
-      .time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
       .addField("count", Model.getInstance().getBrokerCollections().size())
       .build());
   
@@ -139,7 +151,7 @@ public class KafkaMonitor extends TimerTask {
           batchPoints.point(Point.measurement("kafka-broker")
             .tag("broker", brokerId)
             .tag("type", type)
-            .addField(name, jmx.getMeterByObjectName(objectName).getMeanRate())
+            .addField(name, jmx.getMeterByObjectName(objectName).getOneMinuteRate())
             .build());
         } else if (className.equals("com.yammer.metrics.reporting.JmxReporter$Gauge")) {
           try {
@@ -188,6 +200,7 @@ public class KafkaMonitor extends TimerTask {
       // TopicModel Metrics
       Map<String, Point.Builder> topicPointMap = new HashMap<>();
       jmx.getObjectNamesByPattern("kafka.*:type=*,name=*,topic=*").forEach(objectName -> {
+        String type = objectName.getKeyProperty("type");
         String topic = objectName.getKeyProperty("topic");
         String name = objectName.getKeyProperty("name");
         JmxReporter.MeterMBean meter = jmx.getMeterByObjectName(objectName);
@@ -195,6 +208,7 @@ public class KafkaMonitor extends TimerTask {
           topicPointMap.put(topic, Point
             .measurement("kafka-broker-topic")
             .tag("broker", brokerId)
+            .tag("type", type)
             .tag("topic", topic));
         }
         topicPointMap.get(topic).addField(name, meter.getMeanRate());
@@ -206,6 +220,7 @@ public class KafkaMonitor extends TimerTask {
       // TopicModel TopicPartitionModel Metrics
       Map<String, Point.Builder> topicPartitionPointMap = new HashMap<>();
       jmx.getObjectNamesByPattern("kafka.*:type=*,name=*,topic=*,partition=*").forEach(objectName -> {
+        String type = objectName.getKeyProperty("type");
         String topic = objectName.getKeyProperty("topic");
         String partition = objectName.getKeyProperty("partition");
         String name = objectName.getKeyProperty("name");
@@ -216,6 +231,7 @@ public class KafkaMonitor extends TimerTask {
           pointBuilder = Point
             .measurement("kafka-broker-topic-partition")
             .tag("broker", brokerId)
+            .tag("type", type)
             .tag("topic", topic)
             .tag("partition", partition);
           topicPartitionPointMap.put(key, pointBuilder);
