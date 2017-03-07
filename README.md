@@ -87,6 +87,10 @@ docker build -t kafka-admin .
 
 - [X] GET /zookeeper/*
 
+- [ ] GET /influxdb/query
+- [ ] POST /influxdb/query
+InfluxDB Query Proxy
+
 ## TODO
 - Get disk usage for topic-partition
 - Monitor offset change for topic-partition

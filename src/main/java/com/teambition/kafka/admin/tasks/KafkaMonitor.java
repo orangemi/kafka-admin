@@ -99,11 +99,11 @@ public class KafkaMonitor extends TimerTask {
     });
   
     // Consumers2
-    Model.getInstance().getConsumerV2s().forEach(consumer -> {
-      Model.getInstance().getConsumerV2(consumer).getOffsets().forEach((topic, paritionOffsets) -> {
+    Model.getInstance().getConsumerManager().getConsumerList().forEach((group, consumer) -> {
+      consumer.getOffsets().forEach((topic, paritionOffsets) -> {
         paritionOffsets.forEach((partition, offset) -> {
           batchPoints.point(Point.measurement("consumer-offsets")
-            .tag("group", consumer)
+            .tag("group", group)
             .tag("topic", topic)
             .tag("partition", String.valueOf(partition))
             .addField("offset", offset)
