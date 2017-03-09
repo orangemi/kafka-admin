@@ -3,7 +3,7 @@ package com.teambition.kafka.admin.api;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
-import com.teambition.kafka.admin.model.Version;
+import com.teambition.kafka.admin.model.VersionModel;
 
 import java.util.HashMap;
 
@@ -11,8 +11,8 @@ import java.util.HashMap;
 public class Index {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Version info() {
-    return new Version();
+  public VersionModel info() {
+    return new VersionModel();
   }
   
   @GET

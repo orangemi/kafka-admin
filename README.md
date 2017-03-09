@@ -92,11 +92,13 @@ docker build -t kafka-admin .
 InfluxDB Query Proxy
 
 ## TODO
-- Get disk usage for topic-partition
-- Monitor offset change for topic-partition
-- Monitor consumer offset change for topic-partition
-- Change topic config
-- ReAssign topic partition
+- [X] Get disk usage for topic-partition
+- [X] Monitor offset change for topic-partition
+- [X] Monitor consumer offset change for topic-partition
+- [X] Change topic config
+- [ ] ReAssign topic partition
+- [ ] Proxy influxdb query
+- [ ] generate warnning if kafka / zookeeper is not available
 
 - Create topic
 - Delete topic

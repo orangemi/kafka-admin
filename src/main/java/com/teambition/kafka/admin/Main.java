@@ -40,7 +40,7 @@ public class Main {
     Model.getInstance(prop);
     WebServer webServer = new WebServer(prop);
     webServer.start();
-    KafkaMonitor monitor = new KafkaMonitor(prop);
+    KafkaMonitor monitor = KafkaMonitor.getInstance(prop);
     monitor.start();
   }
   

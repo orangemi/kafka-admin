@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 public class KafkaMonitor extends TimerTask {
   
+  private static KafkaMonitor instance;
   private Properties properties;
   private boolean enable = true;
   private boolean running = false;
@@ -32,11 +33,22 @@ public class KafkaMonitor extends TimerTask {
     monitor.start();
   }
   
-  public KafkaMonitor() {
+  public static KafkaMonitor getInstance(Properties props) {
+    if (instance == null) {
+      instance = new KafkaMonitor(props);
+    }
+    return instance;
+  }
+  
+  public static KafkaMonitor getInstance() {
+    return instance;
+  }
+  
+  private KafkaMonitor() {
     properties = new Properties();
   }
   
-  public KafkaMonitor(Properties properties) {
+  private KafkaMonitor(Properties properties) {
     this.properties = properties;
     enable = properties.getProperty("monitor.enable", "true").equals("true");
     dbUrl = properties.getProperty("influxdb.url", "http://localhost:8086");
@@ -52,10 +64,15 @@ public class KafkaMonitor extends TimerTask {
     timer.schedule(this, 0, internal_time);
   }
   
-  public void connect() {
-    if (db != null) return;
+  public InfluxDB connect() {
+    if (db != null) return db;
     db = InfluxDBFactory.connect(dbUrl, dbUser, dbPassword);
     db.createDatabase(dbName);
+    return db;
+  }
+  
+  public String getDbName() {
+    return dbName;
   }
   
   @Override
@@ -243,6 +260,7 @@ public class KafkaMonitor extends TimerTask {
       topicPartitionPointMap.forEach((topicPartition, pointBuilder) -> {
         batchPoints.point(pointBuilder.build());
       });
+      jmx.close();
     });
   }
   

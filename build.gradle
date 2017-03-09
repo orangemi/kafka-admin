@@ -1,6 +1,8 @@
 apply plugin: 'java'
 apply plugin: 'application'
 
+version "0.1.0-SNAPSHOT"
+
 repositories {
   jcenter()
 }
@@ -23,6 +25,19 @@ dependencies {
   compile group: 'org.apache.kafka', name: 'kafka_2.11', version: '0.10.1.1'
 
   testCompile 'junit:junit:4.12'
+}
+
+task createVersion(dependsOn: processResources) << {
+  new File("$buildDir/resources/main/version.properties").withWriter { w ->
+    Properties p = new Properties()
+    p['version'] = project.version.toString()
+//    p['timestamp'] = project
+    p.store w, null
+  }
+}
+
+classes {
+  dependsOn createVersion
 }
 
 tasks.withType(Tar) {

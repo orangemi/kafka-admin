@@ -29,20 +29,9 @@ public class ConsumerModel {
     });
     return result;
   }
-//  public Map<TopicPartition, Long> getOffsets() {
-//    return offsets;
-//  }
   
   public void addTopicPartition(TopicPartition topicPartition, long offset) {
-//    System.out.println(topicPartition);
-//    System.out.println(offset);
-    if (offset == 0L) {
-      offsets.remove(topicPartition);
-//      System.out.println("offset is Zero");
-//      System.out.println("offset size: " + offsets.size());
-    } else {
-      offsets.put(topicPartition, offset);
-    }
+    offsets.put(topicPartition, offset);
   }
   
   

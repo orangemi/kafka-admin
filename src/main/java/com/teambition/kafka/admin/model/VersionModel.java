@@ -1,8 +1,13 @@
 package com.teambition.kafka.admin.model;
 
-public class Version {
+public class VersionModel {
   private String name;
   private String version;
+  
+  public VersionModel() {
+    this.name = this.getClass().getPackage().getName();
+    this.version = this.getClass().getPackage().getImplementationVersion();
+  }
   
   public String getVersion() {
     return version;

@@ -5,6 +5,7 @@ import org.apache.kafka.common.TopicPartition;
 import sun.management.ConnectorAddressLink;
 
 import javax.management.*;
+import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import java.io.IOException;
@@ -21,6 +22,7 @@ import com.yammer.metrics.reporting.JmxReporter.TimerMBean;
 
 public class KafkaBrokerJmxClient {
   protected MBeanServerConnection connection;
+  private JMXConnector jmxConnection;
   
   public KafkaBrokerJmxClient() {
   }
@@ -242,7 +244,8 @@ public class KafkaBrokerJmxClient {
   
   public void init(String jmxUrl) {
     try {
-      connection = JMXConnectorFactory.connect(new JMXServiceURL(jmxUrl)).getMBeanServerConnection();
+      jmxConnection = JMXConnectorFactory.connect(new JMXServiceURL(jmxUrl));
+      connection = jmxConnection.getMBeanServerConnection();
     } catch (MalformedURLException e) {
       e.printStackTrace();
       throw new RuntimeException(e);
@@ -280,6 +283,18 @@ public class KafkaBrokerJmxClient {
       result.put(new TopicPartition(topic, partition), offset);
     });
     return result;
+  }
+  
+  public void close() {
+    if (this.jmxConnection != null) {
+      try {
+        this.jmxConnection.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      this.connection = null;
+      this.jmxConnection = null;
+    }
   }
   
   public void init(int pid) {

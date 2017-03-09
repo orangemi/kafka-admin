@@ -73,9 +73,11 @@ public class ConsumerManager implements Runnable {
           }
   
           // remove consumer if consumer's offset all removed
-          if (consumerMap.get(group).getOffsets().size() == 0) {
-            consumerMap.remove(group);
-          }
+          // do not remove because history need !
+//          if (consumerMap.get(group).getOffsets().size() == 0) {
+//            consumerMap.remove(group);
+//          }
+          
 //          System.out.println("record: partition: " + record.partition()  + " offset:" + record.offset() + " : " + count);
 //          System.out.println("  group: " + ((OffsetKey) key).key().group());
 //          System.out.println("  topic: " + ((OffsetKey) key).key().topicPartition().topic());

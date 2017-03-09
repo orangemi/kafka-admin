@@ -1,11 +1,12 @@
 package com.teambition.kafka.admin.tasks;
 
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.glassfish.jersey.filter.LoggingFilter;
+import org.eclipse.jetty.util.resource.Resource;
 import org.glassfish.jersey.jackson.JacksonFeature;
-import org.glassfish.jersey.logging.LoggingFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.monitoring.ApplicationEvent;
 import org.glassfish.jersey.server.monitoring.ApplicationEventListener;
@@ -22,7 +23,7 @@ public class WebServer {
   private Properties properties;
   private int port = 9001;
   private Server server;
-  private String prefix = "/";
+  private String apiPrefix = "/";
   public WebServer() {}
 
   public WebServer(int port) {
@@ -34,7 +35,7 @@ public class WebServer {
     this();
     this.properties = properties;
     this.port = Integer.valueOf(properties.getProperty(PORT_CONFIG));
-    this.prefix = properties.getProperty(PREFIX_CONFIG);
+    this.apiPrefix = properties.getProperty(PREFIX_CONFIG);
   }
   
   public void start() {
@@ -52,14 +53,27 @@ public class WebServer {
           public void onEvent(RequestEvent event) {
             try {
               // System.out.println(event.getType());
+              
               switch (event.getType()) {
                 case FINISHED:
-                  System.out.println(
-                    event.getContainerRequest().getMethod() +
-                      " " +
-                      event.getContainerRequest().getRequestUri().getPath() +
-                      " " +
-                      event.getContainerResponse().getStatus());
+                  Throwable ex = event.getException();
+                  if (event.getContainerResponse() != null) {
+                    System.out.println(
+                      event.getContainerRequest().getMethod() +
+                        " " +
+                        event.getContainerRequest().getRequestUri().getPath() +
+                        " " +
+                        event.getContainerResponse().getStatus());
+                  } else if (ex != null) {
+                    System.out.println(
+                      event.getContainerRequest().getMethod() +
+                        " " +
+                        event.getContainerRequest().getRequestUri().getPath() +
+                        " " +
+                        500);
+                    ex.printStackTrace();
+                  }
+                  break;
               }
             } catch (Exception e) {
               e.printStackTrace();
@@ -71,14 +85,23 @@ public class WebServer {
     });
     config.register(JacksonFeature.class);
     config.packages("com.teambition.kafka.admin.api");
-//    config.register(LoggingFeature.class);
-//    config.property(LoggingFeature.LOGGING_FEATURE_VERBOSITY_SERVER, LoggingFeature.Verbosity.PAYLOAD_ANY);
-//    config.registerInstances(new LoggingFilter())
-    ServletHolder servlet = new ServletHolder(new ServletContainer(config));
+
+//    ServletHolder servlet = new ServletHolder(new ServletContainer(config));
   
+    ServletContextHandler contextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+    contextHandler.addServlet(new ServletHolder(new ServletContainer(config)), this.apiPrefix + "*");
+  
+    ResourceHandler resourceHandler = new ResourceHandler();
+    resourceHandler.setDirectoriesListed(true);
+    
+    resourceHandler.setResourceBase(".");
+  
+    HandlerList handlers = new HandlerList();
+    handlers.addHandler(resourceHandler);
+    handlers.addHandler(contextHandler);
+
     server = new Server(port);
-    ServletContextHandler context = new ServletContextHandler(server, "/*");
-    context.addServlet(servlet, this.prefix + "*");
+    server.setHandler(handlers);
   
     try {
       System.out.println("Server start ...");
