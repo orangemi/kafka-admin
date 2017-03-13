@@ -65,7 +65,7 @@ public class ConsumerManager implements Runnable {
             consumerMap.put(groupTopicPartition.group(), new ConsumerModel(group));
           }
 
-          if (consumerMap.get(group) != null && record.value() == null) {
+          if (record.value() == null) {
             consumerMap.get(group).addTopicPartition(groupTopicPartition.topicPartition(), 0L);
           } else {
             OffsetAndMetadata value = GroupMetadataManager.readOffsetMessageValue(ByteBuffer.wrap(record.value()));

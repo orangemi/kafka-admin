@@ -67,7 +67,9 @@ public class KafkaMonitor extends TimerTask {
   public InfluxDB connect() {
     if (db != null) return db;
     db = InfluxDBFactory.connect(dbUrl, dbUser, dbPassword);
-    db.createDatabase(dbName);
+//    if (!db.describeDatabases().contains(dbName)) {
+//      db.createDatabase(dbName);
+//    }
     return db;
   }
   
@@ -145,7 +147,7 @@ public class KafkaMonitor extends TimerTask {
       });
     });
   
-    logBrokers();
+//    logBrokers();
     db.write(batchPoints);
     running = false;
   }
@@ -178,7 +180,9 @@ public class KafkaMonitor extends TimerTask {
               .tag("type", type)
               .addField(name, number)
               .build());
-          } catch (ClassCastException e) {}
+          } catch (ClassCastException e) {
+            e.printStackTrace();
+          }
         } else {
           // TODO: Unknown objectName type
           System.out.println("Unknown class: " + className + " for object: " + objectName);

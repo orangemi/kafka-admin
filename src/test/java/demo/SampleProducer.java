@@ -4,21 +4,38 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 public class SampleProducer {
   private static final String KAFKA_HOST = "project.ci:29092";
   private static final String KAFKA_TOPIC = "sample";
+  
+  private final static String CONFIG_FILE = "config.properties";
 
   private KafkaProducer producer;
   private String topic;
   
   public static void main(String[] argv) {
-    SampleProducer sp = new SampleProducer();
-    sp.init();
-    System.out.println("Start to produce data...");
-    sp.run();
+  
+    Properties prop = new Properties();
+    try {
+      prop.load(SampleProducer
+        .class.getClassLoader()
+        .getResourceAsStream(CONFIG_FILE));
+  
+      SampleProducer sp = new SampleProducer();
+      sp.init();
+      System.out.println("Start to produce data...");
+      sp.run();
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  
   }
   
   public void init() {
