@@ -4,6 +4,7 @@ import com.teambition.kafka.admin.model.KafkaBrokerJmxClient;
 import com.teambition.kafka.admin.model.Model;
 import com.teambition.kafka.admin.model.TopicPartitionModel;
 import com.yammer.metrics.reporting.JmxReporter;
+import java.lang.reflect.UndeclaredThrowableException;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.BatchPoints;
@@ -331,6 +332,9 @@ public class KafkaMonitor extends TimerTask {
             .tag("partition", partition)
             .addField("Value", jmx.getGaugeByName(objectName).toString())
             .build());
+        } catch (UndeclaredThrowableException e) {
+          System.out.println("Exception for: " + objectName);
+          e.printStackTrace();
         }
       });
 
