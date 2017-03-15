@@ -44,3 +44,12 @@ tasks.withType(Tar) {
   compression = Compression.GZIP
 }
 
+task sampleProducer(type: JavaExec) {
+  main = 'demo.SampleProducer'
+  classpath = sourceSets.main.runtimeClasspath
+}
+
+task sampleConsumer(type: JavaExec) {
+  main = 'demo.SampleConsumer'
+  classpath = sourceSets.main.runtimeClasspath
+}

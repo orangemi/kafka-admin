@@ -121,30 +121,54 @@ public class KafkaMonitor extends TimerTask {
     // TopicModel TopicPartitionModel
     Model.getInstance().getTopicCollections().forEach(topic -> {
       int partitions = Model.getInstance().getTopicPartitions(topic);
+      long topicBeginOffset = 0;
+      long topicEndOffset = 0;
       for (int partition = 0; partition < partitions; partition++) {
         TopicPartitionModel topicPartitionModel = Model.getInstance().getTopicPartition(topic, partition);
-        batchPoints.point(Point.measurement("topic-offsets")
+        long partitionBeginOffset = topicPartitionModel.getBeginOffset();
+        long partitionEndOffset = topicPartitionModel.getEndOffset();
+        topicBeginOffset += partitionBeginOffset;
+        topicEndOffset += partitionEndOffset;
+        batchPoints.point(Point.measurement("topic-partition-offsets")
           .tag("topic", topic)
           .tag("partition", String.valueOf(partition))
-          .addField("beginOffset", topicPartitionModel.getBeginOffset())
-          .addField("endOffset", topicPartitionModel.getEndOffset())
+          .addField("beginOffset", partitionBeginOffset)
+          .addField("endOffset", partitionEndOffset)
           .build()
         );
       }
+
+      batchPoints.point(Point.measurement("topic-offsets")
+        .tag("topic", topic)
+        .addField("beginOffset", topicBeginOffset)
+        .addField("endOffset", topicEndOffset)
+        .build()
+      );
     });
   
     // Consumers2
     Model.getInstance().getConsumerManager().getConsumerList().forEach((group, consumer) -> {
-      consumer.getOffsets().forEach((topic, paritionOffsets) -> {
-        paritionOffsets.forEach((partition, offset) -> {
-          batchPoints.point(Point.measurement("consumer-offsets")
+      consumer.getOffsets().forEach((topic, partitionOffsets) -> {
+        long consumerTopicOffset = 0;
+        for (Map.Entry<Integer, Long> entry: partitionOffsets.entrySet()) {
+          long offset = entry.getValue();
+          long partition = entry.getKey();
+          consumerTopicOffset += offset;
+          batchPoints.point(Point.measurement("consumer-partition-offsets")
             .tag("group", group)
             .tag("topic", topic)
             .tag("partition", String.valueOf(partition))
             .addField("offset", offset)
             .build()
           );
-        });
+        }
+        batchPoints.point(Point.measurement("consumer-offsets")
+          .tag("group", group)
+          .tag("topic", topic)
+          .addField("offset", consumerTopicOffset)
+          .build()
+        );
+
       });
     });
   
