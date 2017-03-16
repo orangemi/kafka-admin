@@ -1,13 +1,15 @@
 version: '2'
 services:
   kafka-admin:
-    build: .
+    image: orangemi/kafka-admin
     network_mode: bridge
     container_name: kakfa-admin
-    #environment:
+    environment:
+      KAFKA_ADMIN_zookeeper: zk:2181
+      KAFKA_ADMIN_KAFKA: kafka:2181
     external_links:
       - zk:zk
-      - kafka1:kafka
+      - kafka:kafka
     ports:
       - 9001:9001
 

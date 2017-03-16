@@ -1,4 +1,8 @@
+.classpath
+.project
+.idea/
+.settings/
 .vscode/
+.gradle/
 build/
 config/development*
-

@@ -2,93 +2,90 @@
 ==========================
 
 ## Dependencies
-- [Grafana](http://www.grafana.org/) & [InfluxDB](https://influxdb.com/) 
-This can simply run by docker with this `docker-compose.yml`:
+- [InfluxDB](https://influxdb.com/) 
+- [Kafka](https://kafka.apache.org/)
+
+These can simply run by docker with this `docker-compose.yml`:
 ```
 version: '2'
 services:
-  grafana:
-    image: grafana/grafana
-    network_mode: bridge
-    ports:
-      - 9008:3000
-    links:
-      - influxdb
   influxdb:
     image: influxdb
-    network_mode: bridge
     ports:
-      - 8083:8083
       - 8086:8086
-    volumes:
-      - ./data:/var/lib/influxdb
-```
-- [Zookeeper](http://zookeeper.apache.org/) & [Kafka](http://kafka.apache.org/)
-This can simply run by docker with this `docker-compose.yml`:
-```
-version: '2'
-services:
-  zk1:
+  zk:
     image: zookeeper
     ports:
       - 2181:2181
   kafka:
-    image: orangemi/kafka
+    image: confluentinc/cp-kafka
     restart: always
     ports:
       - 9092:9092
+      - 9999:9999
     links:
-      - zk1
+      - zk
     environment:
       JMX_PORT: 9999
-      KAFKA_ZOOKEEPER_CONNECT: zk1:2181
+      KAFKA_ZOOKEEPER_CONNECT: zk:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
 ```
 Please note that `JMX_PORT` should be assigned for kafka instance
 
 ## Get started
-- modify your `config/config.properties`
-- run `gradle run`
-- see your result by grafana
-- visit [http://localhost:9001](http://localhost:9001)
+run `make build` and then run `gradle run`. visit [http://localhost:9001/admin/](http://localhost:9001/admin/) to see what you get.
 
-## rujning on Docker
+## Get started by Docker
 See and modify your `docker-compose.yml` and run `docker-compose up -d`
 ```
 docker-compose up -d
 ```
 
-## Build
-```
-gradle distTar
-docker build -t kafka-admin .
-```
+## API
+### GET /api/brokers
+Fetch broker list
 
-## [WIP] API
-- [X] GET /brokers
+### GET /api/topics
+Fetch topic list
 
-- [X] GET /topics
-- [X] GET /topics/:topic
-- [X] GET /topics/:topic/configs
-- [ ] POST /topics/:topic/configs
-- [ ] POST /topics/:topic/reassign
-- [X] GET /topics/:topic/partitions
-- [X] GET /topics/:topic/partitions/:partition
+### GET /api/topics/:topic
+Fetch topic info 
 
-- [X] GET /consumers
-- [X] GET /consumers/:group
+### GET /api/topics/:topic/configs
+### [ ] POST /api/topics/:topic/configs
+Fetch or modify topic config
 
-- [X] GET /consumers2
-- [X] GET /consumers2/:group
-- [X] GET /consumers2/:group/topics/:topic/partitions
-- [X] GET /consumers2/:group/topics/:topic/partitions/:partition
-- [X] POST /consumers2/:group/topics/:topic/partitions/:partition
-提交offset, 提交0为删除
+### [ ] POST /api/topics/:topic/reassign
+Reassign topic-partition replica & leader
 
-- [X] GET /zookeeper/*
+### GET /api/topics/:topic/partitions
+### GET /api/topics/:topic/partitions/:partition
+Fetch topic parition(s)
 
-- [ ] GET /influxdb/query
-- [ ] POST /influxdb/query
+### GET /api/topics/:topic/consumers2
+Get topic assigned kafka consumer (new consumer)
+
+### GET /api/consumers
+### GET /api/consumers/:group
+Get old consumer(s)
+
+### GET /api/consumers2
+### GET /api/consumers2/:group
+Get new(default) consumer(s)
+
+### GET /api/consumers2/:group/topics
+### GET /api/consumers2/:group/topics/:topic/partitions
+Get consumer's assigned topics or partitions
+
+### [X] GET /api/consumers2/:group/topics/:topic/partitions/:partition
+### [X] POST /api/consumers2/:group/topics/:topic/partitions/:partition
+Fetch or commit offset for topic-partition if 0 means delete commit offset.
+
+### [X] GET /api/zookeeper/*
+Fetch zookeeper tree node's data, children, stats
+
+### [X] GET /api/influxdb/query
+### [X] POST /api/influxdb/query
 InfluxDB Query Proxy
 
 ## TODO
@@ -96,16 +93,13 @@ InfluxDB Query Proxy
 - [X] Monitor offset change for topic-partition
 - [X] Monitor consumer offset change for topic-partition
 - [X] Change topic config
-- [ ] ReAssign topic partition
-- [ ] Proxy influxdb query
+- [ ] Reassign topic partition
+- [X] Proxy influxdb query
 - [ ] generate warnning if kafka / zookeeper is not available
+- [ ] Create topic
+- [ ] Delete topic
 
-- Create topic
-- Delete topic
-
-- Get ACL knowledge
-
-- Add a web ui to zk & kafka
+- [ ] Get ACL knowledge
 
 ## Resources
 - https://gist.github.com/ashrithr/5811266
