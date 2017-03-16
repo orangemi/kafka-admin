@@ -1,5 +1,5 @@
-[WIP] Kafka Admin Rest API
-==========================
+Kafka Admin
+============
 
 ## Dependencies
 - [InfluxDB](https://influxdb.com/) 
