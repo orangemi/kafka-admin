@@ -1,6 +1,7 @@
 package com.teambition.kafka.admin.tasks;
 
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -88,17 +89,18 @@ public class WebServer {
 
 //    ServletHolder servlet = new ServletHolder(new ServletContainer(config));
   
-    ServletContextHandler contextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-    contextHandler.addServlet(new ServletHolder(new ServletContainer(config)), this.apiPrefix + "*");
+    ServletContextHandler apiContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+    apiContextHandler.addServlet(new ServletHolder(new ServletContainer(config)), this.apiPrefix + "*");
   
     ResourceHandler resourceHandler = new ResourceHandler();
     resourceHandler.setDirectoriesListed(true);
-    
-    resourceHandler.setResourceBase(".");
+    resourceHandler.setResourceBase("./web");
+    ContextHandler resourceContextHandler = new ContextHandler("/admin");
+    resourceContextHandler.setHandler(resourceHandler);
   
     HandlerList handlers = new HandlerList();
-    handlers.addHandler(resourceHandler);
-    handlers.addHandler(contextHandler);
+    handlers.addHandler(resourceContextHandler);
+    handlers.addHandler(apiContextHandler);
 
     server = new Server(port);
     server.setHandler(handlers);

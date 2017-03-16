@@ -1,0 +1,7 @@
+src/**
+web/src/**
+web/node_modules/**
+web/assets/**
+web/tools/**
+web/package.json
+web/README.md
