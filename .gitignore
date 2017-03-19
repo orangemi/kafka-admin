@@ -1,8 +1,9 @@
-.classpath
-.project
+/.classpath
+/.project
 .idea/
 .settings/
 .vscode/
 .gradle/
-build/
+/build/
+/bin/
 config/development*

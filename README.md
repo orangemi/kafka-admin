@@ -30,7 +30,9 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zk:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
 ```
-Please note that `JMX_PORT` should be assigned for kafka instance
+Please note that `JMX_PORT` should be assigned for kafka instance.
+
+See `docker-compose.yml` get more info
 
 ## Get started
 run `make build` and then run `gradle run`. visit [http://localhost:9001/admin/](http://localhost:9001/admin/) to see what you get.
@@ -115,7 +117,7 @@ InfluxDB Query Proxy
 - https://github.com/orangemi/kafka-admin-web
 
 ## Monitor Metrics
-- [ ] Partitions
+- [X] Partitions
 - [ ] Leader Elections
 - [ ] Active Controllers ??
 - [ ] ISR / Log Flush ??
@@ -130,6 +132,6 @@ InfluxDB Query Proxy
 - [ ] Producer Requests: requests, size, request time
 - [ ] Producer Topics: bytes, dropped messages, messages
 - [ ] Consumer Lag: lag
-- [ ] Consumer Fetcher: fetch bytes, requests, response bytes, responses, fetch time,
+- [X] Consumer Fetcher: fetch bytes, requests, response bytes, responses, fetch time,
 - [ ] Consumer Connectors: kafka_commits rebalance_count zookeeper_commits
-- [ ] Consumer Topics: bytes, messages, queue size, consumer owned parititions
+- [X] Consumer Topics: bytes, messages, queue size, consumer owned parititions
