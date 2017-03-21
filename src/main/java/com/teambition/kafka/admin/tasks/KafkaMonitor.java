@@ -30,6 +30,7 @@ public class KafkaMonitor extends TimerTask {
   private BatchPoints batchPoints;
   private int internal_time = 10000; // 10 seconds
   private Timer timer;
+  private Map<Integer, KafkaBrokerJmxClient> brokerJmxMap = new HashMap<>();
   
   public static void main(String[] argv) {
     KafkaMonitor monitor = new KafkaMonitor();
@@ -193,16 +194,17 @@ public class KafkaMonitor extends TimerTask {
     running = false;
   }
   
-  public void logBrokers() {
-    // broker count
-    batchPoints.point(Point.measurement("kafka-broker")
-      .addField("count", Model.getInstance().getBrokerCollections().size())
-      .build());
-  
-    Model.getInstance().getBrokerCollections().forEach(id -> {
-      String brokerId = String.valueOf(id);
-      KafkaBrokerJmxClient jmx = Model.getInstance().getKafkaBrokerJmxClient(id);
-  
+  public void logBroker(int id) {
+    String brokerId = String.valueOf(id);
+    try {
+      KafkaBrokerJmxClient jmx;
+      if (brokerJmxMap.containsKey(id)) {
+        jmx = brokerJmxMap.get(id);
+      } else {
+        jmx = Model.getInstance().getKafkaBrokerJmxClient(id);
+        brokerJmxMap.put(id, jmx);
+      }
+
       jmx.getObjectNamesByPattern("kafka.*:type=*,name=*").forEach(objectName -> {
         try {
           String className = jmx.getClassName(objectName);
@@ -233,7 +235,7 @@ public class KafkaMonitor extends TimerTask {
                 .addField("Value", jmx.getGaugeByName(objectName).toString())
                 .build());
               
-//              e.printStackTrace();
+  //              e.printStackTrace();
             }
           } else {
             // TODO: Unknown objectName type
@@ -257,7 +259,7 @@ public class KafkaMonitor extends TimerTask {
               .measurement(name)
               .tag("broker", brokerId)
               .tag("request", request)
-//              .tag("type", type)
+  //              .tag("type", type)
               .addField("Mean", meter.getMean())
               .addField("Count", meter.getCount())
               .addField("50thPercentile", meter.get50thPercentile())
@@ -269,7 +271,7 @@ public class KafkaMonitor extends TimerTask {
               .measurement(name)
               .tag("broker", brokerId)
               .tag("request", request)
-//              .tag("type", type)
+  //              .tag("type", type)
               .addField("MeanRate", meter.getMeanRate())
               .addField("OneMinuteRate", meter.getOneMinuteRate())
               .addField("Count", meter.getCount())
@@ -283,7 +285,7 @@ public class KafkaMonitor extends TimerTask {
           e.printStackTrace();
         }
       });
-  
+
       // Producers
       // TODO: kafka.server:type=Produce,client-id=DemoProducer
       
@@ -306,7 +308,7 @@ public class KafkaMonitor extends TimerTask {
           e.printStackTrace();
         }
       });
-  
+
       // TopicModel TopicPartitionModel Metrics
       jmx.getObjectNamesByPattern("kafka.*:type=*,name=*,topic=*,partition=*").forEach(objectName -> {
         String type = objectName.getKeyProperty("type");
@@ -337,9 +339,32 @@ public class KafkaMonitor extends TimerTask {
           e.printStackTrace();
         }
       });
+    } catch (Exception ex) {
+      ex.printStackTrace();
+      System.out.println("jmx log error. maybe jmx connection reset or something broken. clean jmx connect...");
+      removeJmxClient(id);
+    } 
+  }
 
-      // All Metrics recoreded.
-      jmx.close();
+  protected void removeJmxClient(int id) {
+    if (brokerJmxMap.containsKey(id)) {
+      try {
+        brokerJmxMap.get(id).close();
+      } catch (Exception ex2) {
+        // ignore all ex
+      }
+      brokerJmxMap.remove(id);
+    }
+  }
+
+  public void logBrokers() {
+    // broker count
+    batchPoints.point(Point.measurement("kafka-broker")
+      .addField("count", Model.getInstance().getBrokerCollections().size())
+      .build());
+  
+    Model.getInstance().getBrokerCollections().forEach(id -> {
+      logBroker(id);
     });
   }
   

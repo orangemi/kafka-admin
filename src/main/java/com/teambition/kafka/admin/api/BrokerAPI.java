@@ -9,6 +9,7 @@ import com.teambition.kafka.admin.model.Model;
 import kafka.cluster.Broker;
 import kafka.utils.Json;
 
+import java.lang.management.ThreadInfo;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,7 +40,19 @@ public class BrokerAPI {
     client.getObjectNamesByPattern(key).forEach(objectName -> {
       result.put(objectName.toString(), client.getAttributeByObjectName(objectName));
     });
+    client.close();
     return result;
+  }
+  
+  @GET
+  @Path("/{id}/threads")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Collection<ThreadInfo> getThreads(@PathParam("id") int id) {
+    KafkaBrokerJmxClient client = Model.getInstance().getKafkaBrokerJmxClient(id);
+    Collection<ThreadInfo> list = client.getThreads();
+    // close client connection immediately sure to not leak
+    client.close();
+    return list;
   }
   
   @GET
@@ -52,6 +65,7 @@ public class BrokerAPI {
     client.getObjectNamesByPattern(key).forEach(objectName -> {
       result.add(objectName.toString());
     });
+    client.close();
     return result;
   }
 }

@@ -1,7 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'application'
 
-version "0.1.0-SNAPSHOT"
+version "0.1.1-SNAPSHOT"
 
 repositories {
   jcenter()
@@ -42,6 +42,12 @@ classes {
 
 tasks.withType(Tar) {
   compression = Compression.GZIP
+}
+
+task dev22(type: JavaExec) {
+  main = mainClassName
+  classpath = sourceSets.main.runtimeClasspath
+  args = ['config/development22.properties']
 }
 
 task sampleProducer(type: JavaExec) {

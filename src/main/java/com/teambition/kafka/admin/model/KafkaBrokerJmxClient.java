@@ -4,16 +4,21 @@ import com.yammer.metrics.core.Meter;
 import org.apache.kafka.common.TopicPartition;
 import sun.management.ConnectorAddressLink;
 
-import javax.management.*;
+import javax.management.MBeanException;
+import javax.management.ReflectionException;
+import javax.management.AttributeNotFoundException;
+import javax.management.JMX;
+import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import java.io.IOException;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.net.MalformedURLException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import com.yammer.metrics.reporting.JmxReporter.MeterMBean;
 import com.yammer.metrics.reporting.JmxReporter.GaugeMBean;
@@ -75,6 +80,32 @@ public class KafkaBrokerJmxClient {
 
   }
   
+  public Collection<ThreadInfo> getThreads() {
+    return getThreads(false, false);
+  }
+  
+  public Collection<ThreadInfo> getThreads(boolean lockedMonitors, boolean lockedSynchronizers) {
+    try {
+      ThreadMXBean threadMXBean = JMX.newMXBeanProxy(connection, new ObjectName("java.lang:type=Threading"), ThreadMXBean.class);
+      return Arrays.asList(threadMXBean.dumpAllThreads(lockedMonitors, lockedSynchronizers));
+    } catch (MalformedObjectNameException e) {
+      e.printStackTrace();
+      ThreadInfo[] threads = new ThreadInfo[]{};
+      return Arrays.asList(threads);
+    }
+//    return threads;
+  }
+  
+  public ThreadInfo getThread(int threadId) {
+    try {
+      ThreadMXBean threadMXBean = JMX.newMXBeanProxy(connection, new ObjectName("java.lang:type=Threading"), ThreadMXBean.class);
+      return threadMXBean.getThreadInfo(threadId);
+    } catch (MalformedObjectNameException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+  
   public Map<String, MeterMBean> getBrokerTopicsMetrics() {
     return getBrokerServerMetricsByType("BrokerTopicMetrics");
   }
@@ -129,11 +160,11 @@ public class KafkaBrokerJmxClient {
             String key = attr.getName();
             double value = (double)connection.getAttribute(objectName, key);
             socketProperty.put(key, value);
-          } catch (MBeanException | AttributeNotFoundException | ReflectionException | InstanceNotFoundException | IOException e) {
+          } catch (Exception e) {
             e.printStackTrace();
           }
         });
-      } catch (InstanceNotFoundException | IntrospectionException | ReflectionException | IOException e) {
+      } catch (Exception e) {
         e.printStackTrace();
       }
 
@@ -181,11 +212,11 @@ public class KafkaBrokerJmxClient {
         try {
           Object value = connection.getAttribute(objectName, key);
           result.put(key, value);
-        } catch (MBeanException | AttributeNotFoundException | ReflectionException | IOException | InstanceNotFoundException e) {
+        } catch (Exception e) {
           e.printStackTrace();
         }
       });
-    } catch (InstanceNotFoundException | IntrospectionException | IOException | ReflectionException e) {
+    } catch (Exception e) {
       e.printStackTrace();
     }
     return result;
@@ -210,7 +241,7 @@ public class KafkaBrokerJmxClient {
   public String getClassName(ObjectName objectName) {
     try {
       return connection.getMBeanInfo(objectName).getClassName();
-    } catch (InstanceNotFoundException | IntrospectionException | IOException | ReflectionException e) {
+    } catch (Exception e) {
       e.printStackTrace();
       return "";
     }
@@ -235,7 +266,7 @@ public class KafkaBrokerJmxClient {
       try {
         double value = (double)connection.getAttribute(objectName, "queue-size");
         result.get(objectName.getKeyProperty("type")).setValue(value);
-      } catch (MBeanException | AttributeNotFoundException | InstanceNotFoundException | ReflectionException | IOException e) {
+      } catch (Exception e) {
         e.printStackTrace();
       }
     });

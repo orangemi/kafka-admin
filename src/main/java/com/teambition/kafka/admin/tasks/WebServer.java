@@ -15,12 +15,30 @@ import org.glassfish.jersey.server.monitoring.RequestEvent;
 import org.glassfish.jersey.server.monitoring.RequestEventListener;
 import org.glassfish.jersey.servlet.ServletContainer;
 
+import java.io.IOException;
 import java.util.Properties;
 
 public class WebServer {
   public final static String CONFIG_PREFIX = "webserver";
   public final static String PORT_CONFIG = "webserver.port";
   public final static String PREFIX_CONFIG = "webserver.prefix";
+  public final static String VERSION_FILE = "version.properties";
+
+  private static Properties versionProperties;
+  public static Properties getVersionProperties() {
+    if (versionProperties == null) {
+      try {
+        versionProperties = new Properties();
+        versionProperties.load(WebServer
+          .class.getClassLoader()
+          .getResourceAsStream(VERSION_FILE));
+      } catch (IOException ex) {
+        // ignore exception
+      }
+    }
+    return versionProperties;
+  }
+
   private Properties properties;
   private int port = 9001;
   private Server server;

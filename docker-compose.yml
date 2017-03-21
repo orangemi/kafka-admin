@@ -1,13 +1,11 @@
 version: '2'
 services:
   zk:
-    network_mode: bridge
     image: zookeeper
     ports:
       - 2181:2181
   kafka:
     image: confluentinc/cp-kafka
-    network_mode: bridge
     ports:
       - 9092:9092
       - 9999:9999
@@ -18,13 +16,11 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zk:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
   influxdb:
-    network_mode: bridge
     image: influxdb
     ports:
       - 8086:8086
   kafka-admin:
     image: orangemi/kafka-admin
-    network_mode: bridge
     container_name: kakfa-admin
     environment:
       KAFKA_ADMIN_zookeeper: zk:2181
