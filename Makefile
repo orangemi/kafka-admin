@@ -9,7 +9,10 @@ build: build-web build-api
 build-docker: build
 	docker build -t orangemi/kafka-admin .
 
-push-docker: build-docker
+tag-docker:
+	
+
+push-docker: tag-docker
 	docker push orangemi/kafka-admin
 
 .PHONY: build

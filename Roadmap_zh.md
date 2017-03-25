@@ -8,7 +8,7 @@
 
 ## 指标信息 Metrics
 ```
- |- Broker Metrics
+ |- Brokers
  |   |- Replica Manager(Alert)
  |   |   |- UnderReplicatedPartition
  |   |   |- OfflinePartitionsCount
@@ -26,29 +26,76 @@
  |   |   |- MessagesInPerSec
  |   |   |- BytesInPerSec
  |   |   |- BytesOutPerSec
- |   |- Disk
+ |   |- Log / Disk
  |   |   |- LogEndOffset(Sum)
  |   |   |- LogCount(=Sum(LogEndOffset) - Sum(LogBeginOffset))
- |   |   |- Log.Size(Sum)
- |   |   |- Log.NumLogSegments(Sum)
+ |   |   |- Size(Sum)
+ |   |   |- NumLogSegments(Sum) b
  |   |- Disk IO
  |   |   |- LogFlushRateAndTimeMs
- |   |- Requests Rate /PerSec
- |   |   |- Produce
+ |   |- Requests (Rate / Time)
  |   |   |- FetchConsumer
- |   |   |- FetchFollower
- |   |- Requests Time(TotalTimeMs)
+ |   |   |- OffsetCommit
  |   |   |- Produce
- |   |   |- FetchConsumer
+ |   |   |- SyncGroup
+ |   |   |- DeleteTopics
+ |   |   |- DescribeGroups
+ |   |   |- JoinGroup
+ |   |   |- Fetch
+ |   |   |- GroupCoordinator
+ |   |   |- ListGroups
+ |   |   |- OffsetFetch
+ |   |   |- CreateTopics
+ |   |   |- StopReplica
+ |   |   |- LeaderAndIsr
+ |   |   |- ControlledShutdown
+ |   |   |- Heartbeat
+ |   |   |- LeaveGroup
+ |   |   |- Offsets
+ |   |   |- ApiVersions
  |   |   |- FetchFollower
+ |   |   |- Metadata
+ |   |   |- UpdateMetadata
+ |   |   |- SaslHandshake
  |   |- DeplayedOperationPurgatory
  |   |   |- Produce
  |   |   |- Fetch
- |- Topic Metrics
- |   |- Consumer
+ 
+ |- Broker Detail(brokerId=)
+ |   |- Summary
+ |   |- Metrics (All listed above /w chart)
+ |   |- Topic Metrics
+ |   |   |- Summary
+ |   |   |   |- LeaderCount
+ |   |   |   |- PartitionCount
+ |   |   |- Log / Disk
+ |   |   |   |- LogEndOffset(Sum)
+ |   |   |   |- LogStartOffset(Sum)
+ |   |   |   |- LogSize(Sum)
+ |   |   |   |- NumLogSegments(Sum)
+ |   |   |- Request
+ |   |   |   |- FailedProduceRequestsPerSec
+ |   |   |   |- FailedFetchRequestsPerSec
+ |   |   |   |- TotalProduceRequestsPerSec
+ |   |   |   |- TotalFetchRequestsPerSec
+ |   |   |- Network IO
+ |   |   |   |- BytesRejectedPerSec
+ |   |   |   |- BytesInPerSec
+ |   |   |   |- BytesOutPerSec
+ |   |   |   |- MessagesInPerSec
+ |   |- Partition Metrics
+ |   |   |- LogEndOffset
+ |   |   |- LogBeginOffset
+ |   |   |- LogSize
+ |   |   |- NumLogSegments
+ |   |   |- InSyncReplicasCount
+ |   |   |- UnderReplicated
+ |   |   |- ReplicasCount
+
+ |- Topics
  |   |- Offset
- |   |   |- Begin
- |   |   |- End
+ |   |   |- Begin(Sum)
+ |   |   |- End(Sum)
  |   |- PartitionCount
  |   |- Requests
  |   |   |- TotalProduceRequestsPerSec /G broker
@@ -59,6 +106,7 @@
  |   |   |- MessagesIn /G broker
  |   |   |- BytesIn /G broker
  |   |   |- BytesOut /G broker
+ 
  |- Broker-Topic-partition Metrics
 ```
 

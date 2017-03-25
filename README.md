@@ -47,6 +47,12 @@ docker-compose up -d
 ### GET /api/brokers
 Fetch broker list
 
+### GET /api/brokers/:brokerId
+
+### GET /api/brokers/:brokerId/jmx?key=pattern
+
+### GET /api/brokers/:brokerId/jmx/key
+
 ### GET /api/topics
 Fetch topic list
 
