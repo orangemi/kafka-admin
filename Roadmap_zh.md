@@ -24,6 +24,7 @@
  |   |   |- MaxLag(clientId=Replica)
  |   |- Messages/Bytes IO
  |   |   |- MessagesInPerSec
+ |   |   |- BytesRejectedPerSec
  |   |   |- BytesInPerSec
  |   |   |- BytesOutPerSec
  |   |- Log / Disk

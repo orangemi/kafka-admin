@@ -125,7 +125,7 @@ public class KafkaMonitor extends TimerTask {
     Model.getInstance().getConsumerManager().getConsumerList().forEach((group, consumer) -> {
       consumer.getOffsets().forEach((topic, partitionOffsets) -> {
         partitionOffsets.forEach((partition, offset) -> {
-          batchPoints.point(Point.measurement("consumer-offset")
+          batchPoints.point(Point.measurement("consumer")
             .tag("group", group)
             .tag("topic", topic)
             .tag("partition", String.valueOf(partition))
@@ -140,7 +140,7 @@ public class KafkaMonitor extends TimerTask {
     Model.getInstance().getConsumerGroups().forEach(consumer -> {
       Model.getInstance().getZkConsumerGroup(consumer).getOffsets().forEach((topic, partitionOffsets) -> {
         partitionOffsets.forEach((partition, offset) -> {
-          batchPoints.point(Point.measurement("consumer-offsets")
+          batchPoints.point(Point.measurement("consumer")
             .tag("group", consumer)
             .tag("topic", topic)
             .tag("partition", String.valueOf(partition))
@@ -163,7 +163,7 @@ public class KafkaMonitor extends TimerTask {
         TopicPartitionModel topicPartitionModel = Model.getInstance().getTopicPartition(topic, partition);
         long partitionBeginOffset = topicPartitionModel.getBeginOffset();
         long partitionEndOffset = topicPartitionModel.getEndOffset();
-        batchPoints.point(Point.measurement("topic-partition-offset")
+        batchPoints.point(Point.measurement("offset")
           .tag("topic", topic)
           .tag("partition", String.valueOf(partition))
           .addField("beginOffset", partitionBeginOffset)
@@ -192,7 +192,7 @@ public class KafkaMonitor extends TimerTask {
           String type = objectName.getKeyProperty("type");
           if (className.equals("com.yammer.metrics.reporting.JmxReporter$Meter")) {
             JmxReporter.MeterMBean meter = jmx.getMeterByObjectName(objectName);
-            batchPoints.point(Point.measurement("broker-" + name)
+            batchPoints.point(Point.measurement(name)
               .tag("broker", brokerId)
               .tag("type", type)
               .addField("MeanRate", meter.getMeanRate())
@@ -202,7 +202,7 @@ public class KafkaMonitor extends TimerTask {
           } else if (className.equals("com.yammer.metrics.reporting.JmxReporter$Gauge")) {
             try {
               Number number = (Number) jmx.getGaugeByName(objectName);
-              batchPoints.point(Point.measurement("broker-" + name)
+              batchPoints.point(Point.measurement(name)
                 .tag("broker", brokerId)
                 .tag("type", type)
                 .addField("Value", number)
@@ -269,7 +269,7 @@ public class KafkaMonitor extends TimerTask {
           String name = objectName.getKeyProperty("name");
           JmxReporter.MeterMBean meter = jmx.getMeterByObjectName(objectName);
           batchPoints.point(Point
-            .measurement("topic-" + name)
+            .measurement(name)
             .tag("broker", brokerId)
             .tag("type", type)
             .tag("topic", topic)
@@ -290,7 +290,7 @@ public class KafkaMonitor extends TimerTask {
         String name = objectName.getKeyProperty("name");
         JmxReporter.GaugeMBean gauge = jmx.getGaugeByObjectName(objectName);
         Point.Builder pointBuilder = Point
-          .measurement("topic-partition-" + name)
+          .measurement(name)
           .tag("broker", brokerId)
           .tag("type", type)
           .tag("topic", topic)
@@ -327,7 +327,7 @@ public class KafkaMonitor extends TimerTask {
 
   public void logBrokers() {
     // broker count
-    batchPoints.point(Point.measurement("brokerCount")
+    batchPoints.point(Point.measurement("broker-count")
       .addField("Value", Model.getInstance().getBrokerCollections().size())
       .build());
   
@@ -337,7 +337,7 @@ public class KafkaMonitor extends TimerTask {
   }
   
   public void logTopicCount() {
-    Point point = Point.measurement("topicCount")
+    Point point = Point.measurement("topic-count")
       .time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
       .addField("Value", Model.getInstance().getTopicCollections().size())
       .build();
