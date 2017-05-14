@@ -6,6 +6,7 @@ import com.teambition.kafka.admin.model.TopicPartitionModel;
 import com.yammer.metrics.reporting.JmxReporter;
 import java.lang.reflect.UndeclaredThrowableException;
 
+import org.apache.log4j.Logger;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.BatchPoints;
@@ -18,6 +19,8 @@ import java.util.concurrent.TimeUnit;
 
 public class KafkaMonitor extends TimerTask {
   
+  private static final Logger logger = Logger.getLogger(KafkaMonitor.class);
+
   private static KafkaMonitor instance;
   private Properties properties;
   private boolean enable = true;
@@ -112,7 +115,7 @@ public class KafkaMonitor extends TimerTask {
   public void _run() {
     round++;
     connect();
-    System.out.println("Start gather info (round: " + round + ") ...");
+    logger.info("Start gather info (round: " + round + ") ...");
     batchPoints = BatchPoints
       .database(dbName)
       .consistency(InfluxDB.ConsistencyLevel.ALL)
@@ -197,23 +200,47 @@ public class KafkaMonitor extends TimerTask {
               .tag("type", type)
               .addField("MeanRate", meter.getMeanRate())
               .addField("OneMinuteRate", meter.getOneMinuteRate())
+              .addField("FiveMinuteRate", meter.getFiveMinuteRate())
+              .addField("FifteenMinuteRate", meter.getFifteenMinuteRate())
               .addField("Count", meter.getCount())
               .build());
           } else if (className.equals("com.yammer.metrics.reporting.JmxReporter$Gauge")) {
+            Object gauge = jmx.getGaugeByName(objectName);
             try {
-              Number number = (Number) jmx.getGaugeByName(objectName);
+              Number number = (Number) gauge;
               batchPoints.point(Point.measurement(name)
                 .tag("broker", brokerId)
                 .tag("type", type)
                 .addField("Value", number)
                 .build());
             } catch (ClassCastException e) {
-              System.out.println("Cast Gauge Fail: " + objectName);
-              e.printStackTrace();
+              logger.debug("Cast Gauge Fail: " + objectName);
+              // save as String
+              batchPoints.point(Point.measurement(name)
+                .tag("broker", brokerId)
+                .tag("type", type)
+                .addField("Value", gauge.toString())
+                .build());
+              // e.printStackTrace();
             }
+          } else if (className.equals("com.yammer.metrics.reporting.JmxReporter$Timer")) {
+            JmxReporter.TimerMBean timer = jmx.getTimerMBean(objectName);
+            batchPoints.point(Point.measurement(name)
+              .tag("broker", brokerId)
+              .tag("type", type)
+              .addField("Mean", timer.getMean())
+              .addField("MeanRate", timer.getMeanRate())
+              .addField("OneMinuteRate", timer.getOneMinuteRate())
+              .addField("FiveMinuteRate", timer.getFiveMinuteRate())
+              .addField("FifteenMinuteRate", timer.getFifteenMinuteRate())
+              .addField("50thPercentile", timer.get50thPercentile())
+              .addField("99thPercentile", timer.get99thPercentile())
+              .addField("999thPercentile", timer.get999thPercentile())
+              .addField("Count", timer.getCount())
+              .build());
           } else {
             // TODO: Unknown objectName type
-            System.out.println("Unknown class: " + className + " for object: " + objectName);
+            logger.debug("Unknown class: " + className + " for object: " + objectName);
           }
         } catch (Exception e) {
           // ignore unknown expection
@@ -237,6 +264,7 @@ public class KafkaMonitor extends TimerTask {
               .addField("Count", meter.getCount())
               .addField("50thPercentile", meter.get50thPercentile())
               .addField("99thPercentile", meter.get99thPercentile())
+              .addField("999thPercentile", meter.get999thPercentile())
               .build());
           } else if (className.equals("com.yammer.metrics.reporting.JmxReporter$Meter")) {
             JmxReporter.MeterMBean meter = jmx.getMeterByObjectName(objectName);
@@ -246,11 +274,13 @@ public class KafkaMonitor extends TimerTask {
               .tag("request", request)
               .addField("MeanRate", meter.getMeanRate())
               .addField("OneMinuteRate", meter.getOneMinuteRate())
+              .addField("FiveMinuteRate", meter.getFiveMinuteRate())
+              .addField("FifteenMinuteRate", meter.getFifteenMinuteRate())
               .addField("Count", meter.getCount())
               .build());
           } else {
             // TODO: Unknown objectName type
-            System.out.println("Unknown class: " + className + " for object: " + objectName);
+            logger.debug("Unknown class: " + className + " for object: " + objectName);
           }
         } catch (Exception e) {
           // ignore uknown expection
@@ -300,16 +330,16 @@ public class KafkaMonitor extends TimerTask {
           Number value = (Number)gauge.getValue();
           batchPoints.point(pointBuilder.addField("Value", value).build());
         } catch (ClassCastException e) {
-          System.out.println("Cast Gauge Fail: " + objectName);
+          logger.debug("Cast Gauge Fail: " + objectName);
           batchPoints.point(pointBuilder.addField("Value", jmx.getGaugeByName(objectName).toString()).build());
         } catch (UndeclaredThrowableException e) {
-          System.out.println("Exception for: " + objectName);
+          logger.debug("Exception for: " + objectName);
           e.printStackTrace();
         }
       });
     } catch (Exception ex) {
       ex.printStackTrace();
-      System.out.println("jmx log error. maybe jmx connection reset or something broken. clean jmx connect...");
+      logger.debug("jmx log error. maybe jmx connection reset or something broken. clean jmx connect...");
       removeJmxClient(id);
     } 
   }
